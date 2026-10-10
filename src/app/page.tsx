@@ -2,7 +2,8 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { BookingSearchPanel } from "@/components/brand/BookingSearchPanel";
 import { Reveal, SectionHeading } from "@/components/editorial/Reveal";
-import { ExpandingHero } from "@/components/editorial/ExpandingHero";
+import { CinematicHero } from "@/components/editorial/Hero";
+import { ConvoyStrip } from "@/components/editorial/Convoy";
 import { Framed, RouteDivider, SectionMarker, Stamp, TopoLines } from "@/components/editorial/Decor";
 import { FleetCard } from "@/components/fleet/FleetCard";
 import { CARAVANS, DESTINATIONS } from "@/data/catalogue";
@@ -25,8 +26,8 @@ const FAQS = [
 export default function HomePage() {
   return (
     <>
-      {/* 1 — Scroll-expanding cinema hero */}
-      <ExpandingHero />
+      {/* 1 — Cinematic hero */}
+      <CinematicHero />
 
       {/* 1b — Expedition permit: booking panel + yard strip */}
       <section id="permit" className="relative border-b border-border bg-paper" aria-label="Check availability" style={{ scrollMarginTop: "4rem" }}>
@@ -43,6 +44,9 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* 1c — The convoy: scroll-driven illustration */}
+      <ConvoyStrip />
 
       {/* 2 — Brand promise */}
       <section className="border-b border-border bg-paper">

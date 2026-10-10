@@ -259,23 +259,41 @@ export async function POST(req: Request) {
   }
 }
 
-// GET /api/bookings?email=&reference= — guest lookup requires BOTH values
-// (email alone no longer dumps history). Reference comparison is exact.
+// GET /api/bookings?reference=&email|phone|name= — guest lookup. The
+// reference is required plus ONE matching identifier (email exact, phone by
+// digits, name case-insensitive). Single-row lookup by unique reference, so
+// nothing enumerable leaks beyond the caller's own voucher.
 export async function GET(req: Request) {
   const denied = gateMutation(req, "bookings:lookup", 20, 60_000);
   if (denied) return denied;
   const { searchParams } = new URL(req.url);
   const email = (searchParams.get("email") ?? "").trim();
+  const phone = (searchParams.get("phone") ?? "").trim();
+  const name = (searchParams.get("name") ?? "").trim();
   const ref = (searchParams.get("reference") ?? "").trim().toUpperCase();
-  if (!email || !ref) return NextResponse.json({ error: "Provide both email and reference." }, { status: 400 });
+  if (!ref || (!email && !phone && !name)) {
+    return NextResponse.json({ error: "Provide reference plus email, phone or name." }, { status: 400 });
+  }
+  const digits = (s: string) => s.replace(/\D/g, "");
   try {
-    const bookings = await prisma.booking.findMany({
-      where: { guestEmail: email, reference: ref },
-      include: { caravan: { select: { name: true, slug: true } }, payments: true },
-      orderBy: { pickupDate: "desc" },
-      take: 5,
+    const b = await prisma.booking.findUnique({
+      where: { reference: ref },
+      include: { caravan: { select: { name: true, slug: true } } },
     });
-    return NextResponse.json({ bookings: bookings.map((b) => ({ reference: b.reference, caravan: b.caravan.name, pickup: b.pickupDate, return: b.returnDate, status: b.status, totalPence: b.totalPence, depositDuePence: b.depositDuePence })) });
+    const match =
+      !!b &&
+      ((email !== "" && (b.guestEmail ?? "") === email) ||
+        (phone !== "" && !!b.guestPhone && digits(b.guestPhone) === digits(phone) && digits(phone) !== "") ||
+        (name !== "" && (b.guestName ?? "").toLowerCase() === name.toLowerCase()));
+    if (!match || !b) return NextResponse.json({ bookings: [] });
+    return NextResponse.json({
+      bookings: [{
+        reference: b.reference, caravan: b.caravan.name,
+        pickup: b.pickupDate, return: b.returnDate, status: b.status,
+        totalPence: b.totalPence, depositDuePence: b.depositDuePence,
+        guestName: b.guestName,
+      }],
+    });
   } catch {
     return NextResponse.json({ error: "Lookup failed." }, { status: 500 });
   }

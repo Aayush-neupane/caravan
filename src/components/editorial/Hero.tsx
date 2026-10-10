@@ -115,10 +115,9 @@ export function CinematicHero({ fromPence = 9500, bare = false, phrase = "Tow ou
         {!bare && (
           <>
             <div className="absolute inset-x-0 top-16 flex items-center justify-between p-5 font-mono text-[0.68rem] font-bold uppercase tracking-[0.2em] text-paper/85 sm:p-7 sm:pt-5">
-              <span>Field log Nº 01 — Bath, Somerset</span>
-              <span className="hidden sm:inline">51.3811° N, 2.3590° W</span>
-              <Compass size={24} className="text-sand" />
-            </div>
+          <span>Field log Nº 01 — Bath, Somerset</span>
+          <Compass size={24} className="text-sand" />
+        </div>
 
             <div className="relative z-[2] mx-auto flex min-h-svh w-full max-w-wide flex-col justify-center px-5 pb-56 pt-32 sm:px-8">
               {body}

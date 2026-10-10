@@ -5,7 +5,8 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { CARAVANS, EXTRAS, type CatalogueCaravan } from "@/data/catalogue";
 import { DateRangeField } from "@/components/forms/DateRangePicker";
 import { Select } from "@/components/forms/Select";
-import { MiniOutfit, RouteProgress } from "@/components/editorial/MiniConvoy";
+import { RouteProgress } from "@/components/editorial/MiniConvoy";
+import { VoucherTicket } from "@/components/booking/VoucherTicket";
 import { gbp } from "@/lib/format";
 
 type FlowQuote = {
@@ -317,35 +318,24 @@ export function BookingFlow({ initial, caravans = CARAVANS }: { initial: Record<
       )}
 
       {done && (
-        <section className="mt-6 overflow-hidden border border-border bg-white" style={{ borderRadius: 10 }} role="status" aria-label="Collection voucher">
-          <div className="bg-forest px-6 py-5 text-paper sm:px-8">
-            <p className="tick-label !text-sand/70">Reservation held · nothing charged</p>
-            <h2 className="mt-1 font-display text-4xl">Your collection voucher.</h2>
+        <div className="mt-6 space-y-4">
+          <VoucherTicket
+            ticket={{
+              reference: done.reference,
+              guestName: name || null,
+              caravan: caravan.name,
+              pickup,
+              ret,
+              totalPence: quote?.totalPence ?? 0,
+              depositDuePence: quote?.depositDuePence ?? 0,
+              status: "held",
+            }}
+          />
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="font-mono text-[0.68rem] font-bold uppercase tracking-[0.18em] text-success">✓ Reserved — see you at the depot</p>
+            <button type="button" className="btn-secondary" onClick={() => { setDone(null); go(0); }}>New booking</button>
           </div>
-          <div className="grid gap-0 sm:grid-cols-[1fr_auto_1fr] sm:items-stretch">
-            <div className="p-6 sm:px-8">
-              <p className="tick-label">Show this at the depot</p>
-              <p className="mt-1 font-mono text-3xl font-bold tracking-wider text-forest">{done.reference}</p>
-              <div className="mt-3 max-w-[10rem]" aria-hidden="true"><MiniOutfit flag /></div>
-              <p className="mt-1 font-mono text-[0.68rem] font-bold uppercase tracking-[0.18em] text-success">✓ Reserved — see you at the depot</p>
-              <p className="mt-3 text-[0.92rem] leading-relaxed text-charcoal/85">Total {done.total} incl. VAT · {done.deposit} deposit due at the counter. Nothing has been charged.</p>
-              <button type="button" onClick={() => window.print()} className="btn-secondary mt-4">Print voucher</button>
-            </div>
-            <div className="hidden border-l-2 border-dashed border-border sm:block" aria-hidden="true" />
-            <div className="border-t-2 border-dashed border-border p-6 sm:border-t-0 sm:px-8">
-              <p className="tick-label">At the counter, bring</p>
-              <ol className="mt-2 list-decimal space-y-1.5 pl-5 text-[0.9rem] text-charcoal/85">
-                <li>This reference ({done.reference}) — on paper or phone.</li>
-                <li>Your driving licence + tow-car documents.</li>
-                <li>Arrive 15 minutes early at Lansdown Depot.</li>
-              </ol>
-              <div className="mt-4 flex flex-wrap gap-3">
-                <a href={`/account?email=${encodeURIComponent(email)}&reference=${done.reference}`} className="btn-primary">Find my reservation</a>
-                <button type="button" className="btn-secondary" onClick={() => { setDone(null); go(0); }}>New booking</button>
-              </div>
-            </div>
-          </div>
-        </section>
+        </div>
       )}
         </motion.div>
       </AnimatePresence>

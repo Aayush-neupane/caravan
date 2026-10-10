@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { NAV, SITE } from "@/lib/site";
+import { Compass } from "@/components/editorial/Decor";
 
 export function SiteHeader() {
   const pathname = usePathname();
@@ -27,9 +28,12 @@ export function SiteHeader() {
       style={{ background: scrolled ? "#F8F7F2" : "rgba(248,247,242,0.92)" }}
     >
       <div className="mx-auto flex h-16 max-w-wide items-center justify-between gap-4 px-5 sm:px-8">
-        <Link href="/" className="flex items-baseline gap-3" aria-label={`${SITE.brand} home`}>
-          <span className="font-display text-[1.45rem] leading-none text-forest">Hartley <span className="text-amberDark">&amp;</span> Moor</span>
-          <span className="hidden text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-muted md:inline">Caravan Hire · Bath</span>
+        <Link href="/" className="flex items-center gap-2.5" aria-label={`${SITE.brand} home`}>
+          <Compass size={30} className="shrink-0 text-forest" />
+          <span className="flex items-baseline gap-3">
+            <span className="font-display text-[1.45rem] leading-none text-forest">Hartley <span className="text-amberDark">&amp;</span> Moor</span>
+            <span className="hidden text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-muted md:inline">Caravan Hire · Bath</span>
+          </span>
         </Link>
         <nav className="hidden items-center gap-6 lg:flex" aria-label="Primary">
           {NAV.slice(0, 6).map((n) => (
@@ -41,6 +45,12 @@ export function SiteHeader() {
               {n.label}
             </Link>
           ))}
+          <Link
+            href="/account"
+            className={`text-[0.86rem] font-medium ${pathname === "/account" ? "text-forest underline underline-offset-4" : "text-charcoal/80 hover:text-forest"}`}
+          >
+            Find reservation
+          </Link>
           <Link href="/booking" className="btn-primary !py-2.5 !px-5 !text-[0.86rem]">
             Check availability
           </Link>
@@ -73,7 +83,7 @@ export function SiteHeader() {
             ))}
             <li>
               <Link href="/account" className="block py-2 text-[0.95rem] font-medium text-charcoal hover:text-forest">
-                Account
+                Find reservation
               </Link>
             </li>
           </ul>

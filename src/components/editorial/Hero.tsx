@@ -52,9 +52,10 @@ export function CinematicHero() {
     const t0 = performance.now();
     const step = (t: number) => {
       const k = Math.min(1, (t - t0) / dur);
-      // behavior:auto — the site sets html{scroll-behavior:smooth}, which
-      // would re-smooth every frame and cause lag-then-surge mid-drive.
-      window.scrollTo({ top: start + remaining * k, behavior: "auto" });
+      // behavior:instant — "auto" would just obey the site's
+      // html{scroll-behavior:smooth} and re-smooth every frame, causing the
+      // lag-then-surge mid-drive. Only instant gives true constant velocity.
+      window.scrollTo({ top: start + remaining * k, behavior: "instant" });
       if (k < 1) requestAnimationFrame(step);
       else go(href);
     };

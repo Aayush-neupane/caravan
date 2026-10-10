@@ -179,53 +179,188 @@ function Pine({ x, y, s, tone }: { x: number; y: number; s: number; tone: string
   );
 }
 
-// Village church on its hill — nave, spire and glowing belfry. Unmistakably
+// Village church on its hill — rubble-stone nave with traceried windows,
+// gabled porch, staged west tower with pinnacled parapet, ribbed spire with
+// lucarnes, churchyard yews, gravestones and a dry-stone wall. Unmistakably
 // Cotswold; reads as a landmark, never a lighthouse.
+function Yew({ x, y, s = 1 }: { x: number; y: number; s?: number }) {
+  return (
+    <g transform={`translate(${x},${y}) scale(${s})`}>
+      <rect x={-2.5} y={-18} width={5} height={18} fill={INK} />
+      <circle cx={-15} cy={-20} r={14} fill={FOREST} />
+      <circle cx={15} cy={-20} r={14} fill={FOREST} />
+      <circle cx={0} cy={-32} r={20} fill={FOREST} />
+      <circle cx={0} cy={-32} r={20} fill="none" stroke={INK} strokeWidth={2} opacity={0.6} />
+    </g>
+  );
+}
+
 function Tower() {
   return (
     <g transform="translate(1180,432)">
       <ellipse cx={0} cy={6} rx={190} ry={38} fill={PINEC} />
-      <Sheep x={-100} y={0} s={1} />
-      <Sheep x={108} y={6} s={0.8} />
-      <Pine x={-148} y={0} s={1.5} tone={PINEC} />
-      <Pine x={148} y={0} s={1.5} tone={PINEC} />
+      {/* churchyard yews + gravestones (behind the wall) */}
+      <Yew x={-168} y={-4} s={1.25} />
+      <Yew x={152} y={0} s={1} />
+      <g fill={SAND}>
+        <rect x={-69} y={-16} width={10} height={16} />
+        <circle cx={-64} cy={-16} r={5} />
+        <rect x={-40} y={-20} width={4} height={20} />
+        <rect x={-44} y={-16} width={12} height={4} />
+        <rect x={77} y={-12} width={9} height={12} />
+        <circle cx={81.5} cy={-12} r={4.5} />
+      </g>
+      {/* path from the west door to the wall gate */}
+      <rect x={22} y={0} width={28} height={36} fill={SAND} opacity={0.28} />
       {/* nave */}
       <rect x={-128} y={-96} width={132} height={96} fill={SAND} />
+      {/* stone courses */}
+      {Array.from({ length: 7 }).map((_, i) => (
+        <line key={i} x1={-128} y1={-88 + i * 12} x2={4} y2={-88 + i * 12} stroke={FOREST} strokeWidth={1.5} opacity={0.18} />
+      ))}
+      {/* quoins, left corner */}
+      {Array.from({ length: 6 }).map((_, i) => (
+        <rect key={i} x={-128} y={-96 + i * 16} width={i % 2 ? 10 : 7} height={9} fill={SAND} stroke={FOREST} strokeWidth={1.2} />
+      ))}
+      {/* plinth */}
+      <rect x={-128} y={-14} width={132} height={14} fill={FOREST} opacity={0.55} />
+      {/* roof with lead seams + coped gable + cross finial */}
       <polygon points="-136,-96 4,-96 -66,-148" fill={DEEP} />
+      {[-110, -88, -44, -22].map((x) => (
+        <line key={x} x1={-66} y1={-146} x2={x} y2={-97} stroke={SAND} strokeWidth={1.2} opacity={0.4} />
+      ))}
       <polygon points="-136,-96 4,-96 -66,-148" fill="none" stroke={SAND} strokeWidth={3} />
-      {/* buttresses */}
-      {[-112, -80, -48, -16].map((x) => (
-        <rect key={x} x={x} y={-96} width={7} height={96} fill={SAND} stroke={FOREST} strokeWidth={1.5} opacity={0.9} />
+      <line x1={-66} y1={-148} x2={-66} y2={-160} stroke={SAND} strokeWidth={3} />
+      <line x1={-72} y1={-156} x2={-60} y2={-156} stroke={SAND} strokeWidth={3} />
+      {/* glowing nave windows: pointed heads, stone mullions, sills */}
+      {[-102, -70, -38].map((x) => (
+        <g key={x}>
+          <path
+            d={`M${x},-32 L${x},-62 Q${x},-74 ${x + 8},-78 Q${x + 16},-74 ${x + 16},-62 L${x + 16},-32 Z`}
+            fill={AMBER}
+            stroke={FOREST}
+            strokeWidth={2}
+          />
+          <line x1={x + 8} y1={-70} x2={x + 8} y2={-32} stroke={FOREST} strokeWidth={2} />
+          <line x1={x} y1={-48} x2={x + 16} y2={-48} stroke={FOREST} strokeWidth={2} />
+          <rect x={x - 2} y={-32} width={20} height={4} fill={SAND} stroke={FOREST} strokeWidth={1} />
+        </g>
       ))}
-      {/* glowing nave windows */}
-      {[-96, -64, -32].map((x) => (
-        <rect key={x} x={x} y={-72} width={13} height={34} rx={6.5} fill={AMBER} />
-      ))}
-      {/* porch + door */}
+      {/* porch: gabled, pointed arch, niche cross */}
       <rect x={-150} y={-52} width={26} height={52} fill={SAND} />
       <polygon points="-153,-52 -121,-52 -137,-66" fill={DEEP} />
-      <path d="M-143,-0 L-143,-30 Q-143,-38 -137,-38 Q-131,-38 -131,-30 L-131,0 Z" fill={FOREST} />
+      <polygon points="-153,-52 -121,-52 -137,-66" fill="none" stroke={SAND} strokeWidth={2} />
+      <path d="M-143,0 L-143,-30 Q-143,-40 -137,-40 Q-131,-40 -131,-30 L-131,0 Z" fill={FOREST} />
+      <path d="M-141,-46 L-141,-56 M-143.5,-50 L-138.5,-50" stroke={FOREST} strokeWidth={1.8} />
       {/* west tower */}
       <rect x={4} y={-196} width={64} height={196} fill={SAND} />
-      <line x1={4} y1={-120} x2={68} y2={-120} stroke={FOREST} strokeWidth={3} opacity={0.45} />
-      {[10, 28, 46].map((x) => (
-        <rect key={x} x={x} y={-212} width={11} height={16} fill={SAND} />
+      {/* staged string courses */}
+      <rect x={4} y={-140} width={64} height={4} fill={FOREST} opacity={0.55} />
+      <rect x={4} y={-70} width={64} height={4} fill={FOREST} opacity={0.4} />
+      {/* tower quoins, both corners */}
+      {Array.from({ length: 12 }).map((_, i) => (
+        <g key={i}>
+          <rect x={4} y={-196 + i * 16} width={i % 2 ? 10 : 7} height={9} fill={SAND} stroke={FOREST} strokeWidth={1.2} />
+          <rect x={68 - (i % 2 ? 10 : 7)} y={-196 + i * 16} width={i % 2 ? 10 : 7} height={9} fill={SAND} stroke={FOREST} strokeWidth={1.2} />
+        </g>
       ))}
-      {/* belfry openings, lit */}
-      <rect x={16} y={-186} width={13} height={30} rx={6.5} fill={AMBER} />
-      <rect x={43} y={-186} width={13} height={30} rx={6.5} fill={AMBER} />
-      <line x1={22.5} y1={-186} x2={22.5} y2={-156} stroke={FOREST} strokeWidth={2} />
-      <line x1={49.5} y1={-186} x2={49.5} y2={-156} stroke={FOREST} strokeWidth={2} />
-      {/* clock */}
-      <circle cx={36} cy={-102} r={13} fill="#F8F7F2" />
-      <line x1={36} y1={-102} x2={36} y2={-111} stroke={FOREST} strokeWidth={2.4} />
-      <line x1={36} y1={-102} x2={42} y2={-99} stroke={FOREST} strokeWidth={2.4} />
-      {/* spire + weathercock */}
+      {/* stepped diagonal buttresses at the tower feet */}
+      <g fill={SAND} stroke={FOREST} strokeWidth={1.5}>
+        <rect x={0} y={-70} width={12} height={70} />
+        <rect x={2} y={-130} width={8} height={62} />
+        <polygon points="2,-130 10,-130 6,-140" />
+        <rect x={60} y={-70} width={12} height={70} />
+        <rect x={62} y={-130} width={8} height={62} />
+        <polygon points="62,-130 70,-130 66,-140" />
+      </g>
+      {/* west window: tall, glowing, traceried */}
+      <path
+        d="M24,-56 L24,-92 Q24,-104 36,-108 Q48,-104 48,-92 L48,-56 Z"
+        fill={AMBER}
+        stroke={FOREST}
+        strokeWidth={2.5}
+      />
+      <line x1={36} y1={-100} x2={36} y2={-56} stroke={FOREST} strokeWidth={2} />
+      <line x1={24} y1={-72} x2={48} y2={-72} stroke={FOREST} strokeWidth={2} />
+      <rect x={22} y={-56} width={28} height={4} fill={SAND} stroke={FOREST} strokeWidth={1} />
+      {/* clock with quarter ticks */}
+      <circle cx={36} cy={-118} r={12} fill="#F8F7F2" />
+      <line x1={36} y1={-128} x2={36} y2={-124} stroke={FOREST} strokeWidth={2} />
+      <line x1={36} y1={-112} x2={36} y2={-108} stroke={FOREST} strokeWidth={2} />
+      <line x1={26} y1={-118} x2={30} y2={-118} stroke={FOREST} strokeWidth={2} />
+      <line x1={42} y1={-118} x2={46} y2={-118} stroke={FOREST} strokeWidth={2} />
+      <line x1={36} y1={-118} x2={36} y2={-126} stroke={FOREST} strokeWidth={2.4} />
+      <line x1={36} y1={-118} x2={42} y2={-115} stroke={FOREST} strokeWidth={2.4} />
+      {/* belfry: paired pointed lights with louvers */}
+      {[16, 42].map((x) => (
+        <g key={x}>
+          <path
+            d={`M${x},-154 L${x},-174 Q${x},-184 ${x + 7},-190 Q${x + 14},-184 ${x + 14},-174 L${x + 14},-154 Z`}
+            fill={AMBER}
+            stroke={FOREST}
+            strokeWidth={2}
+          />
+          {[-170, -164, -158].map((y) => (
+            <line key={y} x1={x + 2} y1={y} x2={x + 12} y2={y} stroke={FOREST} strokeWidth={2.2} />
+          ))}
+          <rect x={x - 2} y={-154} width={18} height={4} fill={SAND} stroke={FOREST} strokeWidth={1} />
+        </g>
+      ))}
+      {/* spire with ribs + lucarnes */}
       <polygon points="4,-196 68,-196 36,-272" fill={DEEP} stroke={SAND} strokeWidth={2.5} />
-      <line x1={36} y1={-272} x2={36} y2={-288} stroke={SAND} strokeWidth={3} />
+      <line x1={36} y1={-196} x2={36} y2={-270} stroke={SAND} strokeWidth={1.5} opacity={0.5} />
+      <line x1={20} y1={-196} x2={36} y2={-270} stroke={SAND} strokeWidth={1.2} opacity={0.4} />
+      <line x1={52} y1={-196} x2={36} y2={-270} stroke={SAND} strokeWidth={1.2} opacity={0.4} />
+      {[
+        { x: 22, apex: 27 },
+        { x: 42, apex: 47 },
+      ].map(({ x, apex }) => (
+        <g key={x}>
+          <rect x={x} y={-240} width={10} height={12} fill={DEEP} stroke={SAND} strokeWidth={1.5} />
+          <polygon points={`${x},-240 ${x + 10},-240 ${apex},-248`} fill={SAND} />
+          <rect x={x + 3.5} y={-237} width={3} height={8} fill={AMBER} />
+        </g>
+      ))}
+      {/* weathercock: rod, orb, wind arrow */}
+      <line x1={36} y1={-272} x2={36} y2={-290} stroke={SAND} strokeWidth={3} />
+      <line x1={28} y1={-284} x2={46} y2={-284} stroke={SAND} strokeWidth={2} />
+      <polygon points="46,-288 46,-280 51,-284" fill={SAND} />
       <circle cx={36} cy={-290} r={3} fill={AMBER} />
-      {/* west door */}
-      <path d="M26,-0 L26,-40 Q26,-50 36,-50 Q46,-50 46,-40 L46,0 Z" fill={FOREST} />
+      {/* parapet with merlons + corner pinnacles (front face) */}
+      <rect x={2} y={-202} width={68} height={7} fill={SAND} stroke={FOREST} strokeWidth={1.5} />
+      {[4, 20, 36, 52].map((x) => (
+        <rect key={x} x={x} y={-212} width={10} height={10} fill={SAND} stroke={FOREST} strokeWidth={1.5} />
+      ))}
+      {[2, 61].map((x) => (
+        <g key={x}>
+          <rect x={x} y={-226} width={9} height={22} fill={SAND} stroke={FOREST} strokeWidth={1.5} />
+          <polygon points={`${x},-226 ${x + 9},-226 ${x + 4.5},-238`} fill={SAND} stroke={FOREST} strokeWidth={1.5} />
+          <circle cx={x + 4.5} cy={-240} r={2} fill={AMBER} />
+        </g>
+      ))}
+      {/* planked west door with strap hinges */}
+      <path d="M26,0 L26,-38 Q26,-50 36,-54 Q46,-50 46,-38 L46,0 Z" fill={FOREST} />
+      {[31, 36, 41].map((x) => (
+        <line key={x} x1={x} y1={-44} x2={x} y2={0} stroke={INK} strokeWidth={1.2} opacity={0.7} />
+      ))}
+      <line x1={26} y1={-14} x2={46} y2={-14} stroke={INK} strokeWidth={2} opacity={0.7} />
+      <line x1={26} y1={-32} x2={46} y2={-32} stroke={INK} strokeWidth={2} opacity={0.7} />
+      {/* dry-stone wall with gate + coping (foreground) */}
+      {[
+        { x: -190, w: 212 },
+        { x: 50, w: 140 },
+      ].map(({ x, w }) => (
+        <g key={x}>
+          <rect x={x} y={8} width={w} height={14} fill={DEEP} />
+          <rect x={x} y={5} width={w} height={4} fill={SAND} opacity={0.75} />
+        </g>
+      ))}
+      {[-168, -146, -124, -102, -80, -58, -36, -14, 72, 94, 116, 138, 160].map((x) => (
+        <line key={x} x1={x} y1={9} x2={x} y2={22} stroke={FOREST} strokeWidth={1.5} opacity={0.7} />
+      ))}
+      {/* sheep grazing the foreground */}
+      <Sheep x={-72} y={20} s={1} />
+      <Sheep x={96} y={24} s={0.8} />
     </g>
   );
 }
@@ -310,7 +445,7 @@ export function DriveScene({ progress }: { progress?: MotionValue<number> }) {
       {/* stars */}
       {[
         [90, 46], [210, 96], [350, 40], [490, 76], [630, 34], [750, 86], [880, 40],
-        [1030, 76], [1150, 330], [1270, 90], [1390, 250], [270, 140], [570, 130], [880, 220],
+        [1030, 76], [1080, 250], [1270, 90], [1390, 250], [270, 140], [570, 130], [880, 220],
       ].map(([x, y], i) => (
         <circle key={i} cx={x} cy={y} r={1.7} fill={SAND} opacity={0.45} />
       ))}

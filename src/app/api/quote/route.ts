@@ -14,7 +14,7 @@ const Body = z.object({
   travellers: z.number().int().min(1).max(6).default(2),
   extras: z.array(z.object({ slug: z.string(), qty: z.number().int().min(0).max(10) })).default([]),
   coupon: z.string().max(32).optional(),
-});
+}).strict();
 
 // POST /api/quote — server-side availability + itemised pricing. Never trusts browser totals.
 export async function POST(req: Request) {
@@ -37,18 +37,18 @@ export async function POST(req: Request) {
   }
 
   try {
-    // Resolve extras + coupon BEFORE pricing so every figure derives server-side.
-    let extrasResolved: { unitPricePence: number; qty: number; perNight: boolean }[] = [];
-    try {
-      extrasResolved = await resolveExtras(body.extras);
-    } catch (e) {
-      return NextResponse.json({ error: e instanceof Error ? e.message : "Invalid extras." }, { status: 422 });
-    }
-
     const caravan = await prisma.caravan.findUnique({
       where: { slug: body.slug },
       include: { bookings: { where: { status: { in: [...BLOCKING_STATUSES] } } }, holds: true, blocks: true, maintenance: { where: { done: false } } },
     });
+
+    // Resolve extras + coupon BEFORE pricing so every figure derives server-side.
+    let extrasResolved: { unitPricePence: number; qty: number; perNight: boolean }[] = [];
+    try {
+      extrasResolved = await resolveExtras(body.extras, caravan ? { caravanId: caravan.id } : undefined);
+    } catch (e) {
+      return NextResponse.json({ error: e instanceof Error ? e.message : "Invalid extras." }, { status: 422 });
+    }
 
     const priceWith = async (base: number, weekend: number | null, weeklyDisc: number, cleaning: number, deposit: number) => {
       // Preliminary rental subtotal (no coupon) to validate coupon minimums.

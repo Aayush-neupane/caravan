@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { CARAVANS, EXTRAS } from "@/data/catalogue";
 import { DateRangeField } from "@/components/forms/DateRangePicker";
@@ -99,6 +99,14 @@ export function BookingFlow({ initial }: { initial: Record<string, string | unde
   const [agree, setAgree] = useState(false);
   const [placing, setPlacing] = useState(false);
   const [done, setDone] = useState<{ reference: string; deposit: string; total: string } | null>(null);
+  // One idempotency key per page load: retries/back-button/double-tab reuse
+  // it so the server dedupes instead of creating duplicate bookings.
+  const idemRef = useRef<string | null>(null);
+  if (!idemRef.current) {
+    idemRef.current = typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  }
 
   const caravan = useMemo(() => CARAVANS.find((c) => c.slug === slug)!, [slug]);
   const extrasList = useMemo(
@@ -130,11 +138,16 @@ export function BookingFlow({ initial }: { initial: Record<string, string | unde
   async function placeBooking(paySucceed: boolean) {
     setPlacing(true); setError(null);
     try {
+      // Re-quote immediately before charging so the deposit button label
+      // cannot go stale between step 2 and payment.
+      const fresh = await refreshQuote(extrasList, coupon);
+      if (!fresh) throw new Error("Price changed — please review the new total before paying.");
       const r = await fetch("/api/bookings", {
-        method: "POST", headers: { "content-type": "application/json" },
+        method: "POST", headers: { "content-type": "application/json", "x-idempotency-key": idemRef.current! },
         body: JSON.stringify({
           slug, pickup, return: ret, travellers: Number(travellers),
           extras: extrasList, coupon: coupon || undefined,
+          idempotencyKey: idemRef.current,
           customer: { name, email, phone, driverName, towMake, towModel },
           agree: true,
         }),

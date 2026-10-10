@@ -24,7 +24,7 @@ const Body = z.object({
     towModel: z.string().max(60).optional(),
   }),
   note: z.string().max(500).optional(),
-});
+}).strict();
 
 // POST /api/admin/bookings — staff-created manual reservation (walk-in / phone).
 // Same availability guard as public checkout; priced by the same engine;
@@ -43,6 +43,9 @@ export async function POST(req: Request) {
 
   const catalogue = CARAVANS.find((c) => c.slug === body.slug);
   if (!catalogue) return NextResponse.json({ error: "Unknown caravan." }, { status: 404 });
+  if (body.travellers > catalogue.maxTravellers) {
+    return NextResponse.json({ error: `${catalogue.name} accommodates up to ${catalogue.maxTravellers} travellers.` }, { status: 422 });
+  }
 
   const pickup = new Date(`${body.pickup}T12:00:00Z`);
   const ret = new Date(`${body.return}T12:00:00Z`);
@@ -82,10 +85,29 @@ export async function POST(req: Request) {
 
     const reference = makeReference();
     const booking = await prisma.$transaction(async (tx) => {
-      const clash = await tx.booking.findFirst({
-        where: { caravanId: caravan.id, status: { in: [...BLOCKING_STATUSES] }, pickupDate: { lt: ret }, returnDate: { gt: pickup } },
+      const bufEnd = new Date(ret);
+      bufEnd.setUTCDate(bufEnd.getUTCDate() + 1);
+      const clashBooking = await tx.booking.findFirst({
+        where: { caravanId: caravan.id, status: { in: [...BLOCKING_STATUSES] }, pickupDate: { lt: bufEnd }, returnDate: { gt: pickup } },
       });
-      if (clash) throw new Error("CONFLICT");
+      if (clashBooking) {
+        const exEnd = new Date(clashBooking.returnDate);
+        exEnd.setUTCDate(exEnd.getUTCDate() + 1);
+        if (new Date(clashBooking.pickupDate) < bufEnd && pickup < exEnd) throw new Error("CONFLICT");
+      }
+      const nowTs = new Date();
+      const clashHold = await tx.bookingHold.findFirst({
+        where: { caravanId: caravan.id, expiresAt: { gt: nowTs }, pickupDate: { lt: bufEnd }, returnDate: { gt: pickup } },
+      });
+      if (clashHold) throw new Error("CONFLICT");
+      const clashBlock = await tx.availabilityBlock.findFirst({
+        where: { caravanId: caravan.id, startDate: { lt: bufEnd }, endDate: { gt: pickup } },
+      });
+      if (clashBlock) throw new Error("CONFLICT");
+      const clashMaint = await tx.maintenanceRecord.findFirst({
+        where: { caravanId: caravan.id, done: false, startDate: { lt: bufEnd }, endDate: { gt: pickup } },
+      });
+      if (clashMaint) throw new Error("CONFLICT");
       const created = await tx.booking.create({
         data: {
           reference, caravanId: caravan.id,

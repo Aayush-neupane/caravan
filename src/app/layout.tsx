@@ -3,6 +3,7 @@ import { Cormorant_Garamond, Manrope } from "next/font/google";
 import "../styles/globals.css";
 import { SiteHeader } from "@/components/brand/SiteHeader";
 import { SiteFooter } from "@/components/brand/SiteFooter";
+import { SwRegister } from "@/components/brand/SwRegister";
 
 const display = Cormorant_Garamond({
   subsets: ["latin"],
@@ -46,6 +47,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           Skip to content
         </a>
         <SiteHeader />
+        <SwRegister />
         <div className="pt-16">
           <main id="main">{children}</main>
         </div>

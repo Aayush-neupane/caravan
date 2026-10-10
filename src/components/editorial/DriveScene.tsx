@@ -13,82 +13,96 @@ const AMBER = "#C9A86A";
 /* ------------------------------- pieces -------------------------------- */
 
 function Wheel({ cx, spin }: { cx: number; spin?: MotionValue<number> }) {
-  const spokes = (
-    <g stroke={SAND} strokeWidth={2.4}>
-      <line x1={cx - 12} y1={0} x2={cx + 12} y2={0} />
-      <line x1={cx - 6} y1={-10.4} x2={cx + 6} y2={10.4} />
-      <line x1={cx - 6} y1={10.4} x2={cx + 6} y2={-10.4} />
+  const face = (
+    <g>
+      <circle cx={cx} cy={0} r={24} fill={INK} />
+      <circle cx={cx} cy={0} r={24} fill="none" stroke={SAND} strokeWidth={3} />
+      <circle cx={cx} cy={0} r={14} fill={INK} stroke={SAND} strokeWidth={2} />
+      <g stroke={SAND} strokeWidth={2.6}>
+        <line x1={cx - 12.5} y1={0} x2={cx + 12.5} y2={0} />
+        <line x1={cx - 6.2} y1={-10.8} x2={cx + 6.2} y2={10.8} />
+        <line x1={cx - 6.2} y1={10.8} x2={cx + 6.2} y2={-10.8} />
+      </g>
+      <circle cx={cx} cy={0} r={4.5} fill={AMBER} />
     </g>
   );
+  if (!spin) return <g>{face}</g>;
   return (
-    <g>
-      <circle cx={cx} cy={0} r={24} fill={INK} stroke={SAND} strokeWidth={3} />
-      {spin ? (
-        <motion.g style={{ rotate: spin, transformBox: "fill-box", transformOrigin: "center" }}>
-          <circle cx={cx} cy={0} r={13} fill="none" stroke={SAND} strokeWidth={2.5} />
-          {spokes}
-          <circle cx={cx} cy={0} r={4} fill={AMBER} />
-        </motion.g>
-      ) : (
-        <g>
-          <circle cx={cx} cy={0} r={13} fill="none" stroke={SAND} strokeWidth={2.5} />
-          {spokes}
-          <circle cx={cx} cy={0} r={4} fill={AMBER} />
-        </g>
-      )}
-    </g>
+    <motion.g style={{ rotate: spin, transformBox: "fill-box", transformOrigin: "center" }}>
+      {face}
+    </motion.g>
   );
 }
 
+// Direction of travel: RIGHT. The car leads, the caravan trails behind it
+// on the hitch — as a real outfit does.
 function Convoy({ spin, bob }: { spin?: MotionValue<number>; bob?: MotionValue<number> }) {
   const body = (
     <g>
-      {/* tow car */}
+      {/* ---- caravan (trailing, left) ---- */}
+      <rect x={8} y={-120} width={300} height={90} rx={9} fill={SAND} />
+      <rect x={8} y={-60} width={300} height={30} fill={FOREST} />
+      <rect x={8} y={-64} width={300} height={4} fill={AMBER} />
+      {/* rear lamps (left face) */}
+      <rect x={8} y={-52} width={5} height={12} fill={AMBER} />
+      {/* windows */}
+      <rect x={24} y={-106} width={44} height={30} fill={FOREST} />
+      <rect x={76} y={-106} width={44} height={30} fill={FOREST} />
+      <rect x={230} y={-106} width={30} height={30} fill={FOREST} />
+      <line x1={46} y1={-106} x2={46} y2={-76} stroke={SAND} strokeWidth={2} />
+      <line x1={98} y1={-106} x2={98} y2={-76} stroke={SAND} strokeWidth={2} />
+      {/* door */}
+      <rect x={136} y={-106} width={32} height={76} fill="none" stroke={FOREST} strokeWidth={2.5} />
+      <rect x={141} y={-100} width={22} height={22} fill={FOREST} />
+      <circle cx={162} cy={-62} r={2.5} fill={FOREST} />
+      <rect x={143} y={-30} width={18} height={8} fill={FOREST} opacity={0.7} />
+      {/* roof gear */}
+      <rect x={60} y={-130} width={42} height={10} rx={2} fill={SAND} />
+      <rect x={172} y={-128} width={52} height={8} rx={2} fill={SAND} opacity={0.9} />
+      <line x1={8} y1={-120} x2={308} y2={-120} stroke={FOREST} strokeWidth={2} opacity={0.5} />
+      {/* front locker face (right) */}
+      <rect x={282} y={-72} width={26} height={42} rx={5} fill={SAND} stroke={FOREST} strokeWidth={2} />
+      {/* marker lamps */}
+      <circle cx={30} cy={-45} r={3} fill={AMBER} />
+      <circle cx={180} cy={-45} r={3} fill={AMBER} />
+      <circle cx={294} cy={-45} r={3} fill={AMBER} />
+      {/* mudflaps */}
+      <rect x={48} y={-24} width={10} height={16} fill={INK} />
+      <rect x={208} y={-24} width={10} height={16} fill={INK} />
+      {/* A-frame drawbar to the car */}
+      <line x1={308} y1={-56} x2={346} y2={-44} stroke={SAND} strokeWidth={5} />
+      <line x1={308} y1={-30} x2={346} y2={-44} stroke={SAND} strokeWidth={5} />
+      <line x1={330} y1={-43} x2={330} y2={-28} stroke={SAND} strokeWidth={4} />
+      <circle cx={330} cy={-24} r={5} fill={INK} stroke={SAND} strokeWidth={2} />
+
+      {/* ---- tow car (leading, right) ---- */}
       <path
-        d="M4,-26 L4,-62 Q4,-70 12,-70 L62,-70 L94,-106 Q97,-110 102,-110 L172,-110 Q178,-110 182,-104 L202,-70 L272,-70 Q280,-70 280,-62 L280,-26 Z"
+        d="M350,-26 L350,-60 Q350,-68 358,-68 L410,-68 L442,-104 Q445,-108 450,-108 L520,-108 Q526,-108 530,-102 L552,-68 L618,-68 Q626,-68 626,-60 L626,-26 Z"
         fill={SAND}
       />
-      <path d="M98,-102 L170,-102 L184,-74 L72,-74 Z" fill={FOREST} />
-      <line x1={128} y1={-102} x2={128} y2={-74} stroke={SAND} strokeWidth={3} />
-      <rect x={64} y={-66} width={120} height={5} fill={FOREST} opacity={0.85} />
-      <line x1={30} y1={-70} x2={30} y2={-30} stroke={FOREST} strokeWidth={2.5} opacity={0.6} />
-      <line x1={248} y1={-70} x2={248} y2={-30} stroke={FOREST} strokeWidth={2.5} opacity={0.6} />
-      <rect x={272} y={-52} width={8} height={10} fill={AMBER} />
-      <rect x={96} y={-118} width={70} height={6} rx={3} fill={SAND} opacity={0.9} />
-      {/* hitch */}
-      <line x1={280} y1={-42} x2={312} y2={-42} stroke={SAND} strokeWidth={6} />
-      <line x1={302} y1={-42} x2={302} y2={-28} stroke={SAND} strokeWidth={4} />
-      <circle cx={302} cy={-24} r={5} fill={INK} stroke={SAND} strokeWidth={2} />
-      {/* caravan */}
-      <rect x={312} y={-120} width={298} height={90} rx={9} fill={SAND} />
-      <rect x={312} y={-60} width={298} height={30} fill={FOREST} />
-      <rect x={312} y={-64} width={298} height={4} fill={AMBER} />
-      <rect x={326} y={-106} width={44} height={30} fill={FOREST} />
-      <rect x={378} y={-106} width={44} height={30} fill={FOREST} />
-      <rect x={516} y={-106} width={30} height={30} fill={FOREST} />
-      <line x1={348} y1={-106} x2={348} y2={-76} stroke={SAND} strokeWidth={2} />
-      <line x1={400} y1={-106} x2={400} y2={-76} stroke={SAND} strokeWidth={2} />
-      {/* door */}
-      <rect x={436} y={-106} width={30} height={76} fill="none" stroke={FOREST} strokeWidth={2.5} />
-      <rect x={441} y={-100} width={20} height={22} fill={FOREST} />
-      <circle cx={459} cy={-62} r={2.5} fill={FOREST} />
-      <rect x={444} y={-30} width={16} height={8} fill={FOREST} opacity={0.7} />
-      {/* roof gear */}
-      <rect x={360} y={-130} width={42} height={10} rx={2} fill={SAND} />
-      <rect x={472} y={-128} width={52} height={8} rx={2} fill={SAND} opacity={0.9} />
-      <line x1={312} y1={-120} x2={610} y2={-120} stroke={FOREST} strokeWidth={2} opacity={0.5} />
-      {/* marker lamps + plate */}
-      <circle cx={330} cy={-45} r={3} fill={AMBER} />
-      <circle cx={480} cy={-45} r={3} fill={AMBER} />
-      <circle cx={594} cy={-45} r={3} fill={AMBER} />
-      <rect x={584} y={-72} width={26} height={34} rx={5} fill={SAND} stroke={FOREST} strokeWidth={2} />
-      {/* mudflaps */}
-      <rect x={336} y={-24} width={10} height={16} fill={INK} />
-      <rect x={566} y={-24} width={10} height={16} fill={INK} />
-      <Wheel cx={70} spin={spin} />
-      <Wheel cx={212} spin={spin} />
-      <Wheel cx={372} spin={spin} />
-      <Wheel cx={542} spin={spin} />
+      {/* glasshouse: windscreen slopes toward the front (right) */}
+      <path d="M434,-100 L516,-100 L544,-70 L434,-70 Z" fill={FOREST} />
+      <line x1={492} y1={-100} x2={500} y2={-70} stroke={SAND} strokeWidth={3} />
+      <rect x={358} y={-98} width={56} height={26} fill={FOREST} />
+      <line x1={386} y1={-98} x2={386} y2={-72} stroke={SAND} strokeWidth={2.5} />
+      {/* waistline, doors, handles */}
+      <rect x={350} y={-66} width={276} height={5} fill={FOREST} opacity={0.85} />
+      <line x1={430} y1={-68} x2={430} y2={-30} stroke={FOREST} strokeWidth={2.5} opacity={0.6} />
+      <line x1={520} y1={-68} x2={520} y2={-30} stroke={FOREST} strokeWidth={2.5} opacity={0.6} />
+      <rect x={404} y={-58} width={14} height={4} rx={2} fill={FOREST} />
+      <rect x={494} y={-58} width={14} height={4} rx={2} fill={FOREST} />
+      {/* roof rails */}
+      <rect x={448} y={-116} width={70} height={6} rx={3} fill={SAND} opacity={0.9} />
+      {/* lamps: headlamp at the leading front, tail at the rear */}
+      <rect x={618} y={-52} width={8} height={11} fill={AMBER} />
+      <rect x={350} y={-52} width={6} height={11} fill={AMBER} opacity={0.85} />
+      {/* exhaust */}
+      <rect x={358} y={-24} width={16} height={5} fill={INK} />
+
+      <Wheel cx={80} spin={spin} />
+      <Wheel cx={240} spin={spin} />
+      <Wheel cx={410} spin={spin} />
+      <Wheel cx={560} spin={spin} />
     </g>
   );
   if (!bob) return <g>{body}</g>;
@@ -109,7 +123,7 @@ function Pine({ x, y, s, tone }: { x: number; y: number; s: number; tone: string
 
 function Tower() {
   return (
-    <g transform="translate(1050,432)">
+    <g transform="translate(1180,432)">
       <ellipse cx={0} cy={6} rx={168} ry={38} fill={PINEC} />
       <Pine x={-120} y={0} s={1.5} tone={PINEC} />
       <Pine x={-88} y={4} s={1.1} tone={DEEP} />
@@ -151,22 +165,22 @@ export function DriveScene() {
       preserveAspectRatio="xMidYMax slice"
       className="absolute inset-0 h-full w-full"
       role="img"
-      aria-label="Illustration: a caravan driving past hills, pines and a stone tower at dusk"
+      aria-label="Illustration: a tow car towing a caravan past hills, pines and a stone tower at dusk"
     >
       {/* stars */}
       {[
         [90, 46], [210, 96], [350, 40], [490, 76], [630, 34], [750, 86], [880, 40],
-        [1030, 76], [1150, 36], [1270, 90], [1390, 50], [270, 140], [570, 130], [990, 150],
+        [1030, 76], [1150, 330], [1270, 90], [1390, 250], [270, 140], [570, 130], [990, 150],
       ].map(([x, y], i) => (
         <circle key={i} cx={x} cy={y} r={1.7} fill={SAND} opacity={0.45} />
       ))}
-      {/* sun */}
-      <circle cx={230} cy={200} r={60} fill="none" stroke={AMBER} strokeOpacity={0.35} strokeWidth={1.5} />
-      <circle cx={230} cy={200} r={44} fill={AMBER} />
+      {/* sun, right of the headline */}
+      <circle cx={1150} cy={170} r={60} fill="none" stroke={AMBER} strokeOpacity={0.35} strokeWidth={1.5} />
+      <circle cx={1150} cy={170} r={44} fill={AMBER} />
       {/* birds */}
       <g stroke={SAND} strokeOpacity={0.6} strokeWidth={2.2} fill="none" strokeLinecap="round">
-        <path d="M1180,120 q10,-10 20,0 q10,-10 20,0" />
-        <path d="M1252,152 q8,-8 16,0 q8,-8 16,0" />
+        <path d="M920,110 q10,-10 20,0 q10,-10 20,0" />
+        <path d="M992,142 q8,-8 16,0 q8,-8 16,0" />
       </g>
 
       {/* far mountains + snowcaps */}
@@ -222,8 +236,8 @@ export function DriveScene() {
       <line x1={0} y1={472} x2={1440} y2={472} stroke={SAND} strokeOpacity={0.85} strokeWidth={3} />
       <line x1={0} y1={522} x2={1440} y2={522} stroke={SAND} strokeOpacity={0.8} strokeWidth={3} strokeDasharray="34 26" />
 
-      {/* convoy */}
-      <g transform="translate(415,545)">
+      {/* convoy: car leads right, caravan trails left */}
+      <g transform="translate(403,545)">
         {reduce ? <Convoy /> : <Convoy spin={spin} bob={bob} />}
       </g>
 

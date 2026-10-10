@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { CARAVANS } from "@/data/catalogue";
 import { FleetCard } from "@/components/fleet/FleetCard";
+import { DateRangeField } from "@/components/forms/DateRangePicker";
+import { Select } from "@/components/forms/Select";
 import { gbp } from "@/lib/format";
 
 export function FleetExplorer({ initial }: { initial: Record<string, string | undefined> }) {
@@ -48,56 +50,63 @@ export function FleetExplorer({ initial }: { initial: Record<string, string | un
   return (
     <div className="mx-auto grid max-w-wide gap-8 px-5 py-10 sm:px-8 lg:grid-cols-12">
       <aside className="lg:col-span-3" aria-label="Filters">
-        <form className="border border-border bg-white p-5" style={{ borderRadius: 10 }} onSubmit={(e) => e.preventDefault()}>
+        <form className="border border-border bg-white p-5 lg:sticky lg:top-24" style={{ borderRadius: 10 }} onSubmit={(e) => e.preventDefault()}>
           <div className="flex items-center justify-between">
             <h2 className="font-semibold text-charcoal">Filters {activeCount > 0 && <span className="ml-2 bg-forest px-2 py-0.5 text-[0.75rem] text-white" style={{ borderRadius: 4 }}>{activeCount} active</span>}</h2>
             {activeCount > 0 && <button type="button" onClick={clear} className="text-[0.82rem] font-semibold text-forest underline">Clear all</button>}
           </div>
           <div className="mt-5 space-y-5">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="field-label" htmlFor="f-pickup">Pickup</label>
-                <input id="f-pickup" type="date" className="field-input" defaultValue={pickup} onChange={(e) => updateDates(e.target.value, ret)} />
-              </div>
-              <div>
-                <label className="field-label" htmlFor="f-return">Return</label>
-                <input id="f-return" type="date" className="field-input" defaultValue={ret} onChange={(e) => updateDates(pickup, e.target.value)} />
-              </div>
-            </div>
-            <div>
-              <label className="field-label" htmlFor="f-cat">Category</label>
-              <select id="f-cat" className="field-input" value={category} onChange={(e) => setCategory(e.target.value)}>
-                <option value="any">Any category</option>
-                <option value="Compact Tourer">Compact tourer</option>
-                <option value="Premium Two-Berth">Premium two-berth</option>
-                <option value="Family Four-Berth">Family four-berth</option>
-              </select>
-            </div>
-            <div>
-              <label className="field-label" htmlFor="f-berths">Berths</label>
-              <select id="f-berths" className="field-input" value={berths} onChange={(e) => setBerths(e.target.value)}>
-                <option value="any">Any</option>
-                <option value="2">2 berths</option>
-                <option value="4">4 berths</option>
-              </select>
-            </div>
+            <DateRangeField
+              id="f-dates"
+              label="Pickup → return"
+              pickup={pickup}
+              ret={ret}
+              onChange={updateDates}
+            />
+            <Select
+              id="f-cat"
+              label="Category"
+              value={category}
+              onChange={setCategory}
+              options={[
+                { value: "any", label: "Any category" },
+                { value: "Compact Tourer", label: "Compact tourer" },
+                { value: "Premium Two-Berth", label: "Premium two-berth" },
+                { value: "Family Four-Berth", label: "Family four-berth" },
+              ]}
+            />
+            <Select
+              id="f-berths"
+              label="Berths"
+              value={berths}
+              onChange={setBerths}
+              options={[
+                { value: "any", label: "Any berths" },
+                { value: "2", label: "2 berths" },
+                { value: "4", label: "4 berths" },
+              ]}
+            />
             <div>
               <label className="field-label" htmlFor="f-price">Max nightly: {gbp(Number(maxPrice) * 100)}</label>
-              <input id="f-price" type="range" min={80} max={200} step={5} value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} className="w-full accent-[#1A2B23]" />
+              <input id="f-price" type="range" min={80} max={200} step={5} value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} className="w-full accent-[#1A2B23]" aria-valuetext={gbp(Number(maxPrice) * 100)} />
+              <div className="flex justify-between text-[0.72rem] text-muted"><span>{gbp(8000)}</span><span>{gbp(20000)}</span></div>
             </div>
-            <label className="flex items-center gap-2 text-[0.9rem]">
+            <label className="flex cursor-pointer items-center gap-2.5 text-[0.9rem]">
               <input type="checkbox" checked={showerOnly} onChange={(e) => setShowerOnly(e.target.checked)} className="h-4 w-4 accent-[#1A2B23]" />
               Separate shower required
             </label>
-            <div>
-              <label className="field-label" htmlFor="f-sort">Sort</label>
-              <select id="f-sort" className="field-input" value={sort} onChange={(e) => setSort(e.target.value)}>
-                <option value="relevance">Relevance</option>
-                <option value="price-asc">Price: low to high</option>
-                <option value="price-desc">Price: high to low</option>
-                <option value="berths">Berths</option>
-              </select>
-            </div>
+            <Select
+              id="f-sort"
+              label="Sort"
+              value={sort}
+              onChange={setSort}
+              options={[
+                { value: "relevance", label: "Relevance" },
+                { value: "price-asc", label: "Price: low to high" },
+                { value: "price-desc", label: "Price: high to low" },
+                { value: "berths", label: "Most berths" },
+              ]}
+            />
           </div>
         </form>
       </aside>

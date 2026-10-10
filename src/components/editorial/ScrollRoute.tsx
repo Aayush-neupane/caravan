@@ -2,7 +2,7 @@
 
 import { useRef } from "react";
 import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
-import { MiniOutfit } from "./MiniConvoy";
+import { MiniOutfit, RoadStrip } from "./MiniConvoy";
 
 // Scroll-driven route strip: the pocket outfit drives from one milestone
 // to the other as the strip crosses the viewport. A living divider.
@@ -26,18 +26,20 @@ export function ScrollRoute({
 
   return (
     <div ref={ref} className="relative mx-auto max-w-wide overflow-hidden px-5 sm:px-8" aria-hidden="true">
-      <div className="relative h-28">
-        <div className="absolute inset-x-0 top-14 border-t-2 border-dashed" style={{ borderColor: ink, opacity: 0.35 }} />
+      <div className="relative h-32">
+        <div className="absolute inset-x-0 top-8">
+          <RoadStrip />
+        </div>
         {[8, 50, 92].map((left, i) => (
           <span
             key={left}
-            className="absolute top-14 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full"
-            style={{ left: `${left}%`, background: i === 1 ? "#C9A86A" : ink }}
+            className="absolute rounded-full"
+            style={{ left: `${left}%`, top: 54, width: 12, height: 12, transform: "translate(-50%,-50%)", background: i === 1 ? "#C9A86A" : ink }}
           />
         ))}
         <motion.div
-          className="absolute top-3 w-28 sm:w-32"
-          style={reduce ? { left: "50%", x: "-50%" } : { left: x, x: "-50%" }}
+          className="absolute w-28 sm:w-32"
+          style={reduce ? { left: "50%", top: 33, x: "-50%" } : { left: x, top: 33, x: "-50%" }}
         >
           <MiniOutfit spin={reduce ? undefined : spin} />
         </motion.div>

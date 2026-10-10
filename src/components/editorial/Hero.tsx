@@ -52,7 +52,9 @@ export function CinematicHero() {
     const t0 = performance.now();
     const step = (t: number) => {
       const k = Math.min(1, (t - t0) / dur);
-      window.scrollTo(0, start + remaining * k);
+      // behavior:auto — the site sets html{scroll-behavior:smooth}, which
+      // would re-smooth every frame and cause lag-then-surge mid-drive.
+      window.scrollTo({ top: start + remaining * k, behavior: "auto" });
       if (k < 1) requestAnimationFrame(step);
       else go(href);
     };

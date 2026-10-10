@@ -6,7 +6,11 @@ import { prisma } from "@/lib/db";
 import { gateMutation } from "@/lib/security";
 import { assertTransition, BOOKING_STATUSES } from "@/features/bookings/stateMachine";
 
-const ActionSchema = z.object({ action: z.enum([...BOOKING_STATUSES, "refund_deposit"] as [string, ...string[]]) }).strict();
+const ActionSchema = z.object({
+  action: z.enum([...BOOKING_STATUSES, "refund_deposit"] as [string, ...string[]]),
+  // Decline reason, recorded on cancellation (e.g. documents insufficient).
+  reason: z.string().min(3).max(200).regex(/^[^<>]*$/).optional(),
+}).strict();
 
 // PATCH /api/admin/bookings/:id — controlled status transitions, cancellation + deposit refund.
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
@@ -17,9 +21,11 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   if (!session || !can("bookings:write", role)) return NextResponse.json({ error: "Staff access required." }, { status: 403 });
 
   let action: string;
+  let reason: string | undefined;
   try {
     const parsed = ActionSchema.parse(await req.json());
     action = parsed.action;
+    reason = parsed.reason?.trim() || undefined;
   } catch {
     return NextResponse.json({ error: "Invalid action." }, { status: 400 });
   }
@@ -43,6 +49,18 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       return NextResponse.json({ ok: true });
     }
 
+    // Depot handover gate: a held reservation becomes active only after at
+    // least one physically-received document is logged against it. No
+    // paperwork on record, no keys.
+    if (action === "active" && booking.status === "held") {
+      const logged = await prisma.customerDocument.count({
+        where: { bookingId: booking.id, status: "approved" },
+      });
+      if (logged === 0) {
+        return NextResponse.json({ error: "Log the received documents first (Documents → log physical receipt)." }, { status: 422 });
+      }
+    }
+
     const from = booking.status as never;
     const to = action as never;
     try {
@@ -57,8 +75,8 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       const fresh = await tx.booking.findUnique({ where: { id: booking.id } });
       if (!fresh) throw new Error("NOT_FOUND");
       assertTransition(fresh.status as never, to);
-      await tx.booking.update({ where: { id: booking.id }, data: { status: action, ...(action === "cancelled" ? { cancelledAt: new Date(), cancelReason: `Cancelled by ${role} (${session.user?.email ?? "staff"})` } : {}) } });
-      await tx.bookingStatusHistory.create({ data: { bookingId: booking.id, from: fresh.status, to: action, actor: role, note: `Admin action by ${session.user?.email ?? role}` } });
+      await tx.booking.update({ where: { id: booking.id }, data: { status: action, ...(action === "cancelled" ? { cancelledAt: new Date(), cancelReason: reason ? `Declined/cancelled by ${session.user?.email ?? role}: ${reason}` : `Cancelled by ${role} (${session.user?.email ?? "staff"})` } : {}) } });
+      await tx.bookingStatusHistory.create({ data: { bookingId: booking.id, from: fresh.status, to: action, actor: session.user?.email ?? role ?? "system", note: reason ? `Admin action by ${session.user?.email ?? role}: ${reason}` : `Admin action by ${session.user?.email ?? role}` } });
       await tx.auditLog.create({ data: { action: `booking:${action}`, resource: "booking", resourceId: booking.id, detail: `${fresh.status} → ${action} by ${session.user?.email ?? role}` } });
     });
     return NextResponse.json({ ok: true });

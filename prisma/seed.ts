@@ -149,22 +149,21 @@ async function main() {
   // 3. Expiring hold on Solace
   await prisma.bookingHold.deleteMany({ where: { token: "hold_demo_expiring" } });
   await prisma.bookingHold.create({ data: { caravanId: solace.id, pickupDate: days(30), returnDate: days(34), token: "hold_demo_expiring", expiresAt: new Date(Date.now() + 20 * 60 * 1000) } });
-  // 4/6/7. Successful test payment + extras + deposit (Solace)
-  const b4 = await mkBooking("HM-DEMO02", solace.id, days(40), days(47), "awaiting_documents", 132000);
+  // 4/6/7. Online reservation awaiting the depot counter (held) + extras + logged licence
+  const b4 = await mkBooking("HM-DEMO02", solace.id, days(40), days(47), "held", 132000);
   await prisma.bookingExtraItem.deleteMany({ where: { bookingId: b4.id } });
   await prisma.bookingExtraItem.create({ data: { bookingId: b4.id, extraId: bedding.id, qty: 4, unitPricePence: 3500, totalPence: 14000 } });
   await prisma.payment.deleteMany({ where: { bookingId: b4.id } });
-  await prisma.payment.create({ data: { bookingId: b4.id, provider: "demo", amountPence: Math.round(132000 * 0.25), status: "succeeded", idempotencyKey: `seed-${b4.id}` } });
-  // 5. Failed payment
-  const b5 = await mkBooking("HM-DEMO03", rowan.id, days(50), days(53), "payment_review", 34200);
+  // 5. Declined at the counter (documents insufficient)
+  const b5 = await mkBooking("HM-DEMO03", rowan.id, days(50), days(53), "cancelled", 34200);
+  await prisma.booking.update({ where: { id: b5.id }, data: { cancelReason: "Declined at counter — licence entitlement insufficient (demo)" } });
   await prisma.payment.deleteMany({ where: { bookingId: b5.id } });
-  await prisma.payment.create({ data: { bookingId: b5.id, provider: "demo", amountPence: 8550, status: "failed", idempotencyKey: `seed-fail-${b5.id}` } });
   // 8. Maintenance conflict guard (Alder service overlapping nothing, plus one flagged near booking)
   await prisma.maintenanceRecord.deleteMany({ where: { caravanId: alder.id } });
   await prisma.maintenanceRecord.create({ data: { caravanId: alder.id, startDate: days(60), endDate: days(62), category: "Annual service", description: "Demo: habitation + chassis service", priority: "high" } });
-  // 9. Document awaiting approval
+  // 9. Physical licence logged at the counter for the held reservation
   await prisma.customerDocument.deleteMany({ where: { bookingId: b4.id } });
-  await prisma.customerDocument.create({ data: { bookingId: b4.id, kind: "driving_licence", fileName: "demo-licence-redacted.pdf", fileUrl: "private://demo/demo-licence-redacted.pdf", status: "uploaded" } });
+  await prisma.customerDocument.create({ data: { bookingId: b4.id, kind: "driving_licence", fileName: "Physical copy seen at counter", fileUrl: "counter://physical", status: "approved", reviewerNote: "Original seen, in date (demo)" } });
   // 10/11. Cancelled + refund
   const b10 = await mkBooking("HM-DEMO04", rowan.id, days(-30), days(-27), "cancelled", 34200);
   await prisma.refund.deleteMany({ where: { bookingId: b10.id } });

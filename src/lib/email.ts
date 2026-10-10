@@ -1,7 +1,9 @@
 import { prisma } from "./db";
 
 // Transactional email via Resend when configured; otherwise logged.
-// Every send is recorded in Notification for delivery tracking + retry.
+// Every send is recorded in Notification for delivery tracking; failed rows
+// are surfaced in the admin notifications queue for manual resend (no
+// background worker — booking/payment success never depends on email).
 
 export async function sendNotification(opts: {
   bookingId?: string;

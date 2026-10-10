@@ -3,21 +3,21 @@ import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { authOptions, can } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { gateMutation } from "@/lib/security";
-import { mdOverlap } from "../route";
+import { cleanText, gateMutation } from "@/lib/security";
+import { mdOverlap, isMonthDay } from "../route";
 
 const MD = z.string().regex(/^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/, "Use MM-DD.");
 
 const PatchBody = z.object({
   kind: z.enum(["seasonal", "discount"]),
-  name: z.string().min(2).max(80).optional(),
+  name: cleanText(2, 80).optional(),
   startMonthDay: MD.optional(),
   endMonthDay: MD.optional(),
   multiplierPct: z.number().int().min(100).max(200).optional(),
   minNights: z.number().int().min(2).max(60).optional(),
   pct: z.number().int().min(0).max(50).optional(),
   active: z.boolean().optional(),
-}).strict();
+}).strict().refine((o) => Object.keys(o).length > 1, "Nothing to update.");
 
 const DeleteBody = z.object({ kind: z.enum(["seasonal", "discount"]) }).strict();
 
@@ -39,10 +39,17 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 
   try {
     if (body.kind === "seasonal") {
+      // Wrong-kind fields are rejected loudly, never silently dropped.
+      if (body.minNights != null || body.pct != null) {
+        return NextResponse.json({ error: "minNights/pct belong to discount rules, not seasonal ones." }, { status: 400 });
+      }
       const row = await prisma.seasonalRate.findUnique({ where: { id: params.id } });
       if (!row) return NextResponse.json({ error: "Not found." }, { status: 404 });
       const s = body.startMonthDay ?? row.startMonthDay;
       const e = body.endMonthDay ?? row.endMonthDay;
+      if (!isMonthDay(s) || !isMonthDay(e)) {
+        return NextResponse.json({ error: "Start/end must be real calendar dates (MM-DD)." }, { status: 422 });
+      }
       const active = body.active ?? row.active;
       if (active) {
         const others = await prisma.seasonalRate.findMany({ where: { active: true, id: { not: row.id } } });
@@ -97,12 +104,28 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
   if (body.kind === "seasonal") {
     const row = await prisma.seasonalRate.findUnique({ where: { id: params.id } });
     if (!row) return NextResponse.json({ error: "Not found." }, { status: 404 });
-    await prisma.seasonalRate.delete({ where: { id: row.id } });
+    // Two-step removal: disable first, then delete — deleting a live rule
+    // would silently reprice every future quote.
+    if (row.active) {
+      return NextResponse.json({ error: "Disable the rule first, then delete it." }, { status: 409 });
+    }
+    try {
+      await prisma.seasonalRate.delete({ where: { id: row.id } });
+    } catch {
+      return NextResponse.json({ error: "Already removed." }, { status: 404 });
+    }
     await prisma.auditLog.create({ data: { action: "pricing:seasonal_delete", resource: "seasonalRate", resourceId: row.id, detail: `${row.name} deleted by ${session.user?.email ?? role}` } });
   } else {
     const row = await prisma.discountRule.findUnique({ where: { id: params.id } });
     if (!row) return NextResponse.json({ error: "Not found." }, { status: 404 });
-    await prisma.discountRule.delete({ where: { id: row.id } });
+    if (row.active) {
+      return NextResponse.json({ error: "Disable the rule first, then delete it." }, { status: 409 });
+    }
+    try {
+      await prisma.discountRule.delete({ where: { id: row.id } });
+    } catch {
+      return NextResponse.json({ error: "Already removed." }, { status: 404 });
+    }
     await prisma.auditLog.create({ data: { action: "pricing:discount_delete", resource: "discountRule", resourceId: row.id, detail: `${row.name} deleted by ${session.user?.email ?? role}` } });
   }
   return NextResponse.json({ ok: true });

@@ -17,7 +17,13 @@ export default async function BookingPage({ searchParams }: { searchParams: Reco
       <div className="mx-auto max-w-content px-5 py-10 sm:px-8">
         <p className="tick-label">Booking</p>
         <h1 className="mt-2 font-display text-5xl text-charcoal">Your booking, in three steps.</h1>
-        <BookingFlow initial={searchParams} caravans={caravans} />
+        {caravans.length === 0 ? (
+          <p className="mt-6 max-w-md leading-relaxed text-muted" role="status">
+            No caravans are currently available to book. Please call the depot on +44 1225 555 014.
+          </p>
+        ) : (
+          <BookingFlow initial={searchParams} caravans={caravans} />
+        )}
       </div>
     </div>
   );

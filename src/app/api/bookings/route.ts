@@ -259,6 +259,8 @@ export async function POST(req: Request) {
 // GET /api/bookings?email=&reference= — guest lookup requires BOTH values
 // (email alone no longer dumps history). Reference comparison is exact.
 export async function GET(req: Request) {
+  const denied = gateMutation(req, "bookings:lookup", 20, 60_000);
+  if (denied) return denied;
   const { searchParams } = new URL(req.url);
   const email = (searchParams.get("email") ?? "").trim();
   const ref = (searchParams.get("reference") ?? "").trim().toUpperCase();

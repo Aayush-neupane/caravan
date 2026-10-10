@@ -37,7 +37,8 @@ function Example({ slug, pickup, ret, label, seasonal, caravans }: { slug: strin
 
 export default async function PricingPage() {
   const rules = await getPricingRules();
-  const caravans = await getLiveCaravans();
+  const live = await getLiveCaravans();
+  const caravans = live.length > 0 ? live : CARAVANS;
   const by = (slug: string) => caravans.find((c) => c.slug === slug) ?? CARAVANS.find((c) => c.slug === slug)!;
   return (
     <div className="bg-paper">

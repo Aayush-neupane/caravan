@@ -29,7 +29,7 @@ const FAQS = [
 
 export default async function HomePage() {
   const fleet = await getLiveCaravans();
-  const from = Math.min(...fleet.map((c) => c.baseNightlyPence));
+  const from = fleet.length > 0 ? Math.min(...fleet.map((c) => c.baseNightlyPence)) : 9500;
   const berths = [...new Set(fleet.map((c) => c.berths))].sort((a, b) => a - b);
   const sleeps = berths.length > 1 ? `${berths[0]}–${berths[berths.length - 1]}` : `${berths[0] ?? 2}`;
   return (

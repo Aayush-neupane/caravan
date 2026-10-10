@@ -3,15 +3,16 @@
 // and fall back to the cached /offline page (bare dusk drive) instead of the
 // browser's default offline game. API/XHR traffic is network-only.
 // Bump CACHE to ship a fresh worker + fallback.
-const CACHE = "hm-offline-v2";
-const FALLBACK = "/offline";
+const CACHE = "hm-offline-v3";
+const FALLBACKS = ["/offline", "/"]; // each cached independently; one may fail while the other lands
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches
       .open(CACHE)
-      .then((c) => c.add(FALLBACK))
-      .catch(() => {})
+      .then((c) =>
+        Promise.all(FALLBACKS.map((u) => c.add(u).catch(() => {})))
+      )
       .then(() => self.skipWaiting())
   );
 });
@@ -28,6 +29,7 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   if (request.method !== "GET") return;
+  const isDocument = request.mode === "navigate" || request.destination === "document";
   event.respondWith(
     fetch(request)
       .then((res) => {
@@ -43,9 +45,11 @@ self.addEventListener("fetch", (event) => {
       .catch(async () => {
         const cached = await caches.match(request);
         if (cached) return cached;
-        if (request.mode === "navigate") {
-          const fallback = await caches.match(FALLBACK);
-          if (fallback) return fallback;
+        if (isDocument) {
+          for (const u of FALLBACKS) {
+            const fallback = await caches.match(u);
+            if (fallback) return fallback;
+          }
         }
         throw new Error("offline");
       })

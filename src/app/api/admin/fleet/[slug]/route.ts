@@ -3,16 +3,16 @@ import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { authOptions, can } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { gateMutation } from "@/lib/security";
+import { cleanText, gateMutation } from "@/lib/security";
 
-const Body = z.object({ published: z.boolean() }).strict();
+const Body = z.object({ published: z.boolean(), force: z.boolean().default(false) }).strict();
 
 // Editable ops + marketing fields. Ranges keep checkout math sane; merged
 // cross-checks (travellers ≥ berths, min ≤ max) run against the stored row.
 const DetailsBody = z.object({
-  name: z.string().min(2).max(60).optional(),
-  tagline: z.string().min(2).max(140).optional(),
-  description: z.string().min(10).max(2000).optional(),
+  name: cleanText(2, 60).optional(),
+  tagline: cleanText(2, 140).optional(),
+  description: cleanText(10, 2000).optional(),
   berths: z.number().int().min(1).max(8).optional(),
   maxTravellers: z.number().int().min(1).max(8).optional(),
   baseNightlyPence: z.number().int().min(1000).max(100000).optional(),
@@ -22,7 +22,7 @@ const DetailsBody = z.object({
   maxNights: z.number().int().min(1).max(90).optional(),
   cleaningFeePence: z.number().int().min(0).max(50000).optional(),
   securityDepositPence: z.number().int().min(0).max(500000).optional(),
-  towRequirement: z.string().min(5).max(500).optional(),
+  towRequirement: cleanText(5, 500).optional(),
   archived: z.boolean().optional(),
 }).strict().refine((o) => Object.keys(o).length > 0, "Nothing to update.");
 
@@ -65,7 +65,9 @@ export async function PATCH(req: Request, { params }: { params: { slug: string }
     if (merged.minNights > merged.maxNights) {
       return NextResponse.json({ error: "Minimum nights cannot exceed maximum nights." }, { status: 422 });
     }
+    // Archiving always hides the van: archived + published is contradictory.
     const data = Object.fromEntries(Object.entries(details).filter(([, v]) => v !== undefined));
+    if (data.archived === true) data.published = false;
     await prisma.$transaction([
       prisma.caravan.update({ where: { id: caravan.id }, data }),
       prisma.auditLog.create({
@@ -81,6 +83,15 @@ export async function PATCH(req: Request, { params }: { params: { slug: string }
   const future = await prisma.booking.count({
     where: { caravanId: caravan.id, pickupDate: { gte: new Date() }, status: { notIn: ["cancelled", "expired", "completed"] } },
   });
+
+  // Hiding a van with future reservations needs an explicit force flag —
+  // holders otherwise lose the van from under their booking view.
+  if (!body.published && future > 0 && !body.force) {
+    return NextResponse.json(
+      { error: `${future} future reservation(s) reference this caravan. Confirm to unpublish anyway — history is preserved.`, futureBookings: future, needsForce: true },
+      { status: 409 }
+    );
+  }
 
   await prisma.$transaction([
     prisma.caravan.update({ where: { id: caravan.id }, data: { published: body.published } }),

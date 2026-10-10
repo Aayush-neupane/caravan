@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { authOptions, can } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { gateMutation } from "@/lib/security";
+import { gateMutation, isCalendarDate } from "@/lib/security";
 
 const PatchBody = z.object({
   value: z.number().int().min(1).optional(),
@@ -42,8 +42,13 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     return NextResponse.json({ error: `Already used ${row.usedCount}× — max cannot go below that.` }, { status: 422 });
   }
   if (body.caravanSlug) {
-    const van = await prisma.caravan.findUnique({ where: { slug: body.caravanSlug } });
+    const slug = body.caravanSlug.trim();
+    if (!slug) return NextResponse.json({ error: "Caravan slug cannot be blank — send null to clear." }, { status: 422 });
+    const van = await prisma.caravan.findUnique({ where: { slug } });
     if (!van) return NextResponse.json({ error: "Restricted caravan slug not found." }, { status: 422 });
+  }
+  if (body.expiresAt && !isCalendarDate(body.expiresAt)) {
+    return NextResponse.json({ error: "Expiry must be a real calendar date (YYYY-MM-DD)." }, { status: 422 });
   }
 
   await prisma.coupon.update({
@@ -53,7 +58,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       ...(body.minTotalPence != null ? { minTotalPence: body.minTotalPence } : {}),
       ...(body.maxUses !== undefined ? { maxUses: body.maxUses } : {}),
       ...(body.expiresAt !== undefined ? { expiresAt: body.expiresAt ? new Date(`${body.expiresAt}T23:59:59Z`) : null } : {}),
-      ...(body.caravanSlug !== undefined ? { caravanId: body.caravanSlug } : {}),
+      ...(body.caravanSlug !== undefined ? { caravanId: body.caravanSlug ? body.caravanSlug.trim() : null } : {}),
       ...(body.active != null ? { active: body.active } : {}),
     },
   });
@@ -75,7 +80,14 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
   if (row.usedCount > 0) {
     return NextResponse.json({ error: `Used ${row.usedCount}× — disable instead of deleting to keep history.` }, { status: 409 });
   }
-  await prisma.coupon.delete({ where: { id: row.id } });
+  if (row.active) {
+    return NextResponse.json({ error: "Disable the code first, then delete it." }, { status: 409 });
+  }
+  try {
+    await prisma.coupon.delete({ where: { id: row.id } });
+  } catch {
+    return NextResponse.json({ error: "Already removed." }, { status: 404 });
+  }
   await prisma.auditLog.create({
     data: { action: "coupons:delete", resource: "coupon", resourceId: row.id, detail: `${row.code} deleted unused by ${session.user?.email ?? role}` },
   });

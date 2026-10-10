@@ -22,7 +22,7 @@ export async function PATCH(req: Request, { params }: { params: { code: string }
   } catch {
     return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   }
-  const row = await prisma.voucher.findUnique({ where: { code: params.code } });
+  const row = await prisma.voucher.findUnique({ where: { code: params.code.trim().toUpperCase().slice(0, 64) } });
   if (!row) return NextResponse.json({ error: "Not found." }, { status: 404 });
   await prisma.voucher.update({ where: { code: row.code }, data: { active: body.active } });
   await prisma.auditLog.create({

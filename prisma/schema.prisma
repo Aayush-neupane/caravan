@@ -295,7 +295,7 @@ model Coupon {
   usedCount     Int      @default(0)
   expiresAt     DateTime?
   active        Boolean  @default(true)
-  caravanId     String?
+  caravanId     String? // caravan SLUG restriction (compared against slug, not id)
 }
 
 model Voucher {

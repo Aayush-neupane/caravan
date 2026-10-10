@@ -13,7 +13,9 @@ export function PublishButton({ slug, published, future }: { slug: string; publi
     if (!next && future > 0 && !confirm(`${future} future reservation(s) reference this caravan. Unpublish anyway? History is preserved.`)) return;
     setBusy(true); setMsg(null);
     try {
-      const r = await fetch(`/api/admin/fleet/${slug}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ published: next }) });
+      // force:true carries the operator's confirmation past the server's
+      // future-booking guard.
+      const r = await fetch(`/api/admin/fleet/${slug}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ published: next, force: true }) });
       const j = await r.json();
       if (!r.ok) throw new Error(j.error ?? "Update failed");
       setMsg(next ? "Published." : `Unpublished. ${j.futureBookings} future reservation(s) preserved.`);

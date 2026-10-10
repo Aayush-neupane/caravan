@@ -8,7 +8,7 @@ import { assertTransition } from "@/features/bookings/stateMachine";
 
 const Body = z.object({
   status: z.enum(["under_review", "approved", "rejected", "resubmission_requested"]),
-  reviewerNote: z.string().max(500).optional(),
+  reviewerNote: z.string().max(500).regex(/^[^<>]*$/, "Angle brackets are not allowed.").optional(),
 }).strict().refine(
   (b) => (b.status === "approved" || b.status === "under_review" ? true : (b.reviewerNote ?? "").trim().length >= 5),
   "Rejections and resubmission requests must carry a reason (5+ characters)."
@@ -37,7 +37,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     return NextResponse.json({ ok: true, deduped: true });
   }
 
-  await prisma.$transaction(async (tx) => {
+  const outcome = await prisma.$transaction(async (tx) => {
     await tx.customerDocument.update({
       where: { id: doc.id },
       data: { status: body.status, reviewerNote: body.reviewerNote?.trim() || null },
@@ -54,13 +54,33 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
         where: { bookingId: doc.bookingId, id: { not: doc.id }, status: { in: ["uploaded", "under_review"] } },
       });
       if (outstanding === 0) {
-        assertTransition(doc.booking.status as never, "confirmed" as never);
-        await tx.booking.update({ where: { id: doc.bookingId }, data: { status: "confirmed" } });
-        await tx.bookingStatusHistory.create({
-          data: { bookingId: doc.bookingId, from: doc.booking.status, to: "confirmed", actor: role, note: `Documents verified by ${session.user?.email ?? role}` },
-        });
+        // Belt-and-braces: awaiting_documents is only reachable past verified
+        // payment, but never confirm a booking with no succeeded payment —
+        // a directly-written DB row must not convert into a confirmed hire.
+        const paid = await tx.payment.count({ where: { bookingId: doc.bookingId, status: "succeeded" } });
+        if (paid === 0) {
+          await tx.auditLog.create({
+            data: { action: "documents:confirm_blocked", resource: "booking", resourceId: doc.bookingId, detail: `Docs complete but no succeeded payment — held at awaiting_documents by ${session.user?.email ?? role}` },
+          });
+        } else {
+          try {
+            assertTransition(doc.booking.status as never, "confirmed" as never);
+          } catch {
+            throw new Error("TRANSITION");
+          }
+          await tx.booking.update({ where: { id: doc.bookingId }, data: { status: "confirmed" } });
+          await tx.bookingStatusHistory.create({
+            data: { bookingId: doc.bookingId, from: doc.booking.status, to: "confirmed", actor: session.user?.email ?? role ?? "system", note: `Documents verified by ${session.user?.email ?? role}` },
+          });
+        }
       }
     }
+  }).catch((e: unknown) => {
+    if (e instanceof Error && e.message === "TRANSITION") return { transition: true } as const;
+    throw e;
   });
+  if (outcome && "transition" in outcome) {
+    return NextResponse.json({ error: "Booking state changed during review — refresh and try again." }, { status: 409 });
+  }
   return NextResponse.json({ ok: true });
 }

@@ -50,7 +50,11 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
 
   const row = await prisma.maintenanceRecord.findUnique({ where: { id: params.id } });
   if (!row) return NextResponse.json({ error: "Not found." }, { status: 404 });
-  await prisma.maintenanceRecord.delete({ where: { id: row.id } });
+  try {
+    await prisma.maintenanceRecord.delete({ where: { id: row.id } });
+  } catch {
+    return NextResponse.json({ error: "Already removed." }, { status: 404 });
+  }
   await prisma.auditLog.create({
     data: { action: "maintenance:delete", resource: "maintenance", resourceId: row.id, detail: `${row.category} ${row.startDate.toISOString().slice(0, 10)} removed by ${session.user?.email ?? role}` },
   });

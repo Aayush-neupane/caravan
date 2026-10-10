@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { authOptions, can } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { gateMutation } from "@/lib/security";
+import { gateMutation, isCalendarDate } from "@/lib/security";
 
 const CreateBody = z.object({
   code: z.string().min(3).max(24).regex(/^[A-Z0-9-]+$/i, "Letters, numbers and hyphens only."),
@@ -37,9 +37,13 @@ export async function POST(req: Request) {
   const code = body.code.trim().toUpperCase();
   const dupe = await prisma.coupon.findUnique({ where: { code } });
   if (dupe) return NextResponse.json({ error: `Code ${code} already exists.` }, { status: 409 });
-  if (body.caravanSlug) {
-    const van = await prisma.caravan.findUnique({ where: { slug: body.caravanSlug } });
+  const caravanSlug = (body.caravanSlug ?? "").trim() || null;
+  if (caravanSlug) {
+    const van = await prisma.caravan.findUnique({ where: { slug: caravanSlug } });
     if (!van) return NextResponse.json({ error: "Restricted caravan slug not found." }, { status: 422 });
+  }
+  if (body.expiresAt && !isCalendarDate(body.expiresAt)) {
+    return NextResponse.json({ error: "Expiry must be a real calendar date (YYYY-MM-DD)." }, { status: 422 });
   }
 
   const created = await prisma.coupon.create({
@@ -50,7 +54,7 @@ export async function POST(req: Request) {
       minTotalPence: body.minTotalPence,
       maxUses: body.maxUses,
       expiresAt: body.expiresAt ? new Date(`${body.expiresAt}T23:59:59Z`) : null,
-      caravanId: body.caravanSlug,
+      caravanId: caravanSlug,
       active: body.active,
     },
   });

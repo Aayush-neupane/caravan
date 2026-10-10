@@ -12,7 +12,8 @@ export async function getLiveCaravans(): Promise<CatalogueCaravan[]> {
       include: { images: { orderBy: { sort: "asc" } } },
     });
     // Empty table (unseeded) or DB error → static catalogue. A seeded table
-    // with everything unpublished honestly yields an empty public fleet.
+    // with everything unpublished/archived honestly yields an EMPTY public
+    // fleet — never fall back to static rows that would un-hide vans.
     if (rows.length === 0) return CARAVANS;
     const base = new Map(CARAVANS.map((c) => [c.slug, c]));
     const out: CatalogueCaravan[] = [];
@@ -41,7 +42,7 @@ export async function getLiveCaravans(): Promise<CatalogueCaravan[]> {
             : f.images,
       });
     }
-    return out.length > 0 ? out : CARAVANS;
+    return out;
   } catch {
     return CARAVANS;
   }

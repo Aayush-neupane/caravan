@@ -1,18 +1,18 @@
 import Link from "next/link";
 import type { CatalogueCaravan } from "@/data/catalogue";
+import { Framed } from "@/components/editorial/Decor";
 import { gbp } from "@/lib/format";
 
 export function FleetCard({ caravan, pickup, ret }: { caravan: CatalogueCaravan; pickup?: string; ret?: string }) {
   const qs = pickup && ret ? `?pickup=${pickup}&return=${ret}` : "";
   return (
     <article className="group overflow-hidden border border-border bg-white transition-colors hover:border-forest/50" style={{ borderRadius: 10 }}>
-      <Link href={`/fleet/${caravan.slug}${qs}`} aria-label={`View ${caravan.name}`} className="block overflow-hidden">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+      <Link href={`/fleet/${caravan.slug}${qs}`} aria-label={`View ${caravan.name}`} className="block p-2 pb-0">
+        <Framed
           src={caravan.images[0].url.replace("w=1600", "w=900")}
           alt={caravan.images[0].alt}
-          className="aspect-[16/10] w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
-          loading="lazy"
+          caption={`Nº ${caravan.slug.replace("the-", "").toUpperCase()} — ${caravan.name}`}
+          meta={`${caravan.mtplmKg.toLocaleString()} KG MTPLM`}
         />
       </Link>
       <div className="p-5">

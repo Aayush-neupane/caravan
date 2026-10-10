@@ -2,8 +2,8 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { BookingSearchPanel } from "@/components/brand/BookingSearchPanel";
 import { Reveal, SectionHeading } from "@/components/editorial/Reveal";
-import { HeroImage } from "@/components/editorial/HeroImage";
-import { Compass, RouteDivider, SectionMarker, Stamp, TopoLines } from "@/components/editorial/Decor";
+import { ExpandingHero } from "@/components/editorial/ExpandingHero";
+import { Framed, RouteDivider, SectionMarker, Stamp, TopoLines } from "@/components/editorial/Decor";
 import { FleetCard } from "@/components/fleet/FleetCard";
 import { CARAVANS, DESTINATIONS } from "@/data/catalogue";
 import { gbp } from "@/lib/format";
@@ -25,52 +25,21 @@ const FAQS = [
 export default function HomePage() {
   return (
     <>
-      {/* 1 — Cinematic hero with solid booking panel */}
-      <section className="grain relative overflow-hidden bg-forest text-paper" aria-label="Introduction">
-        <div className="absolute inset-0 overflow-hidden" aria-hidden="true">
-          <HeroImage
-            src="https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?auto=format&fit=crop&w=2200&q=75"
-            alt=""
-          />
-          <div className="absolute inset-0" style={{ background: "rgba(18,32,25,0.55)" }} />
-        </div>
-        <div className="relative z-[2] mx-auto grid max-w-wide gap-10 px-5 pb-10 pt-16 sm:px-8 lg:grid-cols-12 lg:pt-24">
-          <div className="lg:col-span-7">
-            <div className="flex items-center gap-3">
-              <Compass size={26} className="text-sand" />
-              <p className="tick-label !text-sand">Field log Nº 01 — Caravan hire · Bath, Somerset</p>
-            </div>
-            <h1 className="mt-4 font-display leading-[0.95]" style={{ fontSize: "clamp(3.4rem, 8.5vw, 7rem)", letterSpacing: "-0.015em" }}>
-              Leave room for the unexpected.
-            </h1>
-            <p className="mt-5 max-w-xl text-[1.1rem] leading-relaxed text-paper/85">
-              Thoughtfully equipped caravans for the freedom to travel at your own pace —
-              across the Cotswolds, the South West and Wales.
-            </p>
-            <div className="mt-6 flex flex-wrap items-center gap-3">
-              <Link href="/fleet" className="btn-primary !border-white/20">Meet the fleet</Link>
-              <Link href="/destinations" className="btn-secondary !bg-transparent !text-paper !border-white/40 hover:!border-white">Road-trip itineraries</Link>
-              <span className="hidden xl:block"><Stamp size={96} dark /></span>
-            </div>
-            <dl className="mt-8 grid max-w-lg grid-cols-3 gap-4 border-t border-white/20 pt-5 text-[0.85rem]">
-              <div><dt className="text-paper/60">Caravans</dt><dd className="mt-1 font-display text-2xl">Three</dd></div>
-              <div><dt className="text-paper/60">Sleeps</dt><dd className="mt-1 font-display text-2xl">2 – 4</dd></div>
-              <div><dt className="text-paper/60">From</dt><dd className="mt-1 font-display text-2xl">{gbp(9500)}<span className="text-sm text-paper/60"> /nt</span></dd></div>
-            </dl>
+      {/* 1 — Scroll-expanding cinema hero */}
+      <ExpandingHero />
+
+      {/* 1b — Expedition permit: booking panel + yard strip */}
+      <section id="permit" className="relative border-b border-border bg-paper" aria-label="Check availability" style={{ scrollMarginTop: "4rem" }}>
+        <div className="mx-auto max-w-wide px-5 sm:px-8">
+          <div className="relative -mt-16 bg-paper p-2 shadow-[0_18px_50px_-20px_rgba(26,43,35,0.35)]" style={{ borderRadius: 12 }}>
+            <p className="absolute -top-3 left-4 bg-amber px-2 py-0.5 font-mono text-[0.68rem] font-bold uppercase tracking-[0.14em] text-forest" style={{ borderRadius: 3 }}>Expedition permit — free to check</p>
+            <BookingSearchPanel compact />
           </div>
-          <div className="lg:col-span-5 lg:pt-10">
-            <div className="relative bg-paper p-2" style={{ borderRadius: 12 }}>
-              <p className="absolute -top-3 left-4 bg-amber px-2 py-0.5 font-mono text-[0.68rem] font-bold uppercase tracking-[0.14em] text-forest" style={{ borderRadius: 3 }}>Expedition permit — free to check</p>
-              <BookingSearchPanel compact />
-            </div>
-          </div>
-        </div>
-        <div className="relative z-[2] border-t border-white/15">
-          <div className="mx-auto flex max-w-wide flex-wrap gap-x-8 gap-y-1 px-5 py-3 font-mono text-[0.7rem] uppercase tracking-[0.16em] text-paper/55 sm:px-8">
+          <div className="flex flex-wrap gap-x-8 gap-y-1 py-4 font-mono text-[0.7rem] uppercase tracking-[0.16em] text-muted">
             <span>Grid ref ST 726 651 — Lansdown Depot</span>
             <span>51.3811° N, 2.3590° W</span>
             <span className="hidden sm:inline">Season: high summer ×1.2</span>
-            <span className="hidden md:inline">UHF channel 7 — yard radio</span>
+            <span className="hidden md:inline">Three vans · sleeps 2–4 · from {gbp(9500)}/nt</span>
           </div>
         </div>
       </section>
@@ -131,19 +100,16 @@ export default function HomePage() {
         </div>
         <div className="relative mx-auto grid max-w-wide gap-10 px-5 pb-16 sm:px-8 lg:grid-cols-12">
           <div className="lg:col-span-7">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <Framed
               src="https://images.unsplash.com/photo-1510312305653-8ed496efae75?auto=format&fit=crop&w=1400&q=70"
               alt="Caravan interior in morning light with made bed and timber cupboards"
-              className="aspect-[16/10] w-full object-cover"
-              style={{ borderRadius: 10 }}
-              loading="lazy"
+              caption="Morning inside The Alder — panelling, wool, oak"
+              meta="FRAME 002 · 35MM"
+              radius={10}
             />
             <div className="mt-4 grid grid-cols-2 gap-4">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="https://images.unsplash.com/photo-1556911220-bff31c812dba?auto=format&fit=crop&w=800&q=65" alt="Compact fitted kitchen with hob and worktop" className="aspect-[4/3] w-full object-cover" style={{ borderRadius: 8 }} loading="lazy" />
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?auto=format&fit=crop&w=800&q=65" alt="Caravan among pines in soft light" className="aspect-[4/3] w-full object-cover" style={{ borderRadius: 8 }} loading="lazy" />
+              <Framed src="https://images.unsplash.com/photo-1556911220-bff31c812dba?auto=format&fit=crop&w=800&q=65" alt="Compact fitted kitchen with hob and worktop" caption="Galley, ready to cook" meta="FRAME 003" ratio="aspect-[4/3]" />
+              <Framed src="https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?auto=format&fit=crop&w=800&q=65" alt="Caravan among pines in soft light" caption="Among pines, first light" meta="FRAME 004" ratio="aspect-[4/3]" />
             </div>
           </div>
           <div className="lg:col-span-4 lg:col-start-9">

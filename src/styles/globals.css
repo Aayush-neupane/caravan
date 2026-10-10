@@ -145,6 +145,49 @@ body {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.07'/%3E%3C/svg%3E");
 }
 
+/* Viewfinder frame: duotone ink that lifts on hover + corner ticks + data strip */
+.tone-img {
+  position: relative;
+  isolation: isolate;
+}
+.tone-img::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: #1a2b23;
+  opacity: 0.16;
+  transition: opacity 0.45s ease;
+}
+.tone-img:hover::after,
+.tone-img:focus-within::after {
+  opacity: 0;
+}
+.vf-tick {
+  position: absolute;
+  z-index: 2;
+  width: 18px;
+  height: 18px;
+  pointer-events: none;
+  border-color: rgba(248, 247, 242, 0.9);
+  border-style: solid;
+  border-width: 0;
+}
+.vf-tl { top: 10px; left: 10px; border-top-width: 2px; border-left-width: 2px; }
+.vf-tr { top: 10px; right: 10px; border-top-width: 2px; border-right-width: 2px; }
+.vf-bl { bottom: 10px; left: 10px; border-bottom-width: 2px; border-left-width: 2px; }
+.vf-br { bottom: 10px; right: 10px; border-bottom-width: 2px; border-right-width: 2px; }
+
+/* Accent mono kicker in Aayush's eyebrow style */
+.tick-accent {
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #a9884e;
+  font-weight: 800;
+}
+
 /* Slow stamp rotation; static under reduced motion */
 @keyframes stamp-rotate {
   to { transform: rotate(360deg); }

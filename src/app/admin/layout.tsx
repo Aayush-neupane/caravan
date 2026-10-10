@@ -50,7 +50,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <nav className="flex gap-4 overflow-x-auto px-5 pb-4 lg:grid lg:gap-5 lg:overflow-visible lg:px-4" aria-label="Admin">
           {GROUPS.map((g) => (
             <div key={g.title} className="min-w-36 shrink-0 lg:min-w-0">
-              <p className="hidden text-[0.66rem] font-bold uppercase tracking-[0.16em] text-paper/45 lg:mb-1.5 lg:block">{g.title}</p>
+              <p className="hidden font-mono text-[0.66rem] font-bold uppercase tracking-[0.2em] text-amber/80 lg:mb-1.5 lg:block">{g.title}</p>
               <ul className="flex gap-1.5 lg:grid">
                 {g.items.map(([label, href]) => (
                   <li key={href}>

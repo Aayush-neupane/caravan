@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { DESTINATIONS } from "@/data/catalogue";
-import { SectionMarker, TopoLines } from "@/components/editorial/Decor";
+import { Framed, SectionMarker, TopoLines } from "@/components/editorial/Decor";
 
 export const metadata: Metadata = { title: "Destinations & itineraries", description: "Road-trip itineraries from Bath: Cotswold lanes, Pembrokeshire coast and Brecon dark skies — distances, seasons and suitable caravans." };
 
@@ -21,9 +21,8 @@ export default function DestinationsPage() {
           {DESTINATIONS.map((d) => (
             <article key={d.slug} className="grid gap-6 border-t border-border pt-8 lg:grid-cols-12">
               <div className="lg:col-span-5">
-                <Link href={`/destinations/${d.slug}`} className="block overflow-hidden" style={{ borderRadius: 10 }} aria-label={`Read the ${d.name} itinerary`}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={d.heroImage} alt={`${d.name}`} className="aspect-[16/10] w-full object-cover transition-transform duration-500 hover:scale-[1.04]" loading="lazy" />
+                <Link href={`/destinations/${d.slug}`} aria-label={`Read the ${d.name} itinerary`} className="block">
+                  <Framed src={d.heroImage} alt={d.name} caption={d.name} meta={`c. ${d.distanceMi} MI`} radius={10} />
                 </Link>
               </div>
               <div className="lg:col-span-6 lg:col-start-7">

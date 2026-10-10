@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { JOURNAL } from "@/data/catalogue";
+import { Framed } from "@/components/editorial/Decor";
 
 export const metadata: Metadata = { title: "Journal", description: "Caravan guides, towing advice, packing lists and slow-travel writing from Hartley & Moor." };
 
@@ -22,12 +23,13 @@ export default function JournalPage({ searchParams }: { searchParams: { cat?: st
         <div className="mt-8 grid gap-6 md:grid-cols-3">
           {list.map((j) => (
             <article key={j.slug} className="group border border-border bg-white transition-colors hover:border-forest/50" style={{ borderRadius: 10 }}>
-              <Link href={`/journal/${j.slug}`} className="block overflow-hidden" style={{ borderRadius: "10px 10px 0 0" }} aria-label={j.title}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={j.heroImage} alt="" className="aspect-[16/10] w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]" loading="lazy" />
+              <div className="p-2 pb-0">
+              <Link href={`/journal/${j.slug}`} className="block" aria-label={j.title}>
+                <Framed src={j.heroImage} alt="" caption={j.category} meta="FIELD NOTES" />
               </Link>
+              </div>
               <div className="p-5">
-                <p className="tick-label">{j.category}</p>
+                <p className="tick-accent">{j.category}</p>
                 <h2 className="mt-2 font-display text-2xl leading-tight"><Link href={`/journal/${j.slug}`} className="hover:text-forest">{j.title}</Link></h2>
                 <p className="mt-2 text-[0.9rem] text-muted">{j.excerpt}</p>
               </div>

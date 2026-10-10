@@ -99,7 +99,7 @@ export function SectionMarker({
         <span className="font-display text-6xl leading-none sm:text-7xl" style={{ color: "transparent", WebkitTextStroke: `1.5px ${dark ? "#C9A86A" : "#1A2B23"}` }} aria-hidden="true">
           {index}
         </span>
-        <p className="tick-label !text-[0.78rem]" style={{ color: dark ? "#EDE6D6" : undefined }}>{kicker}</p>
+        <p className="tick-accent" style={{ color: dark ? "#C9A86A" : undefined }}>{kicker}</p>
       </div>
       {coords ? (
         <p className="hidden font-mono text-[0.72rem] tracking-wider opacity-60 sm:block">{coords}</p>
@@ -154,5 +154,49 @@ export function Compass({ size = 30, className = "" }: { size?: number; classNam
       <polygon points="16,5 19,16 13,16" fill="#C9A86A" />
       <text x={16} y={11.5} textAnchor="middle" fontSize={7} fontWeight={800} fontFamily="Manrope, sans-serif" fill="#1A2B23">N</text>
     </svg>
+  );
+}
+
+// Viewfinder-framed photograph: duotone ink that lifts on hover,
+// rangefinder corner ticks, and a mono data strip. The analogue
+// camera metaphor, applied to expedition photography.
+export function Framed({
+  src,
+  alt,
+  caption,
+  meta = "35MM · F/8",
+  ratio = "aspect-[16/10]",
+  eager = false,
+  radius = 6,
+}: {
+  src: string;
+  alt: string;
+  caption: string;
+  meta?: string;
+  ratio?: string;
+  eager?: boolean;
+  radius?: number;
+}) {
+  return (
+    <figure className="tone-img group overflow-hidden bg-forest" style={{ borderRadius: radius }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt={alt}
+        loading={eager ? "eager" : "lazy"}
+        className={`${ratio} w-full object-cover transition-transform duration-500 group-hover:scale-[1.045]`}
+      />
+      <span className="vf-tick vf-tl" />
+      <span className="vf-tick vf-tr" />
+      <span className="vf-tick vf-bl" />
+      <span className="vf-tick vf-br" />
+      <figcaption
+        className="absolute inset-x-0 bottom-0 z-[2] flex items-center justify-between gap-2 px-3 py-1.5 font-mono text-[0.64rem] font-bold uppercase tracking-[0.16em] text-paper"
+        style={{ background: "rgba(18,32,25,0.82)" }}
+      >
+        <span className="truncate">{caption}</span>
+        <span className="shrink-0 text-amber">{meta}</span>
+      </figcaption>
+    </figure>
   );
 }

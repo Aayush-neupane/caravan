@@ -26,6 +26,29 @@ type FlowQuote = {
 
 const STEPS = ["Dates & caravan", "Extras & eligibility", "Details & payment"];
 
+function Morph({ value, className }: { value: string; className?: string }) {
+  return (
+    <span className={`relative inline-block overflow-hidden ${className ?? ""}`}>
+      <AnimatePresence mode="popLayout" initial={false}>
+        <motion.span
+          key={value}
+          initial={reduceMotion() ? false : { y: 10, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={reduceMotion() ? { opacity: 0 } : { y: -10, opacity: 0 }}
+          transition={{ duration: 0.22 }}
+          className="inline-block whitespace-nowrap"
+        >
+          {value}
+        </motion.span>
+      </AnimatePresence>
+    </span>
+  );
+}
+
+function reduceMotion(): boolean {
+  return typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+}
+
 function Breakdown({ quote }: { quote: Exclude<FlowQuote, null> }) {
   const rows: [string, string, boolean?][] = [
     [`Nightly base · ${quote.nights} nights`, gbp(quote.nightlyBasePence)],
@@ -41,8 +64,8 @@ function Breakdown({ quote }: { quote: Exclude<FlowQuote, null> }) {
       {rows.map(([k, v]) => (
         <div key={k} className="flex justify-between gap-3"><dt className="text-muted">{k}</dt><dd className="whitespace-nowrap font-medium">{v}</dd></div>
       ))}
-      <div className="flex justify-between border-t border-border pt-2 text-base font-bold"><dt>Total</dt><dd>{gbp(quote.totalPence)}</dd></div>
-      <div className="flex justify-between"><dt className="text-muted">Due today (25% deposit)</dt><dd className="font-bold text-forest">{gbp(quote.depositDuePence)}</dd></div>
+      <div className="flex justify-between border-t border-border pt-2 text-base font-bold"><dt>Total</dt><dd><Morph value={gbp(quote.totalPence)} /></dd></div>
+      <div className="flex justify-between"><dt className="text-muted">Due today (25% deposit)</dt><dd className="font-bold text-forest"><Morph value={gbp(quote.depositDuePence)} /></dd></div>
       <div className="flex justify-between text-[0.85rem]"><dt className="text-muted">Later (balance)</dt><dd>{gbp(quote.balancePence)}</dd></div>
       <div className="flex justify-between text-[0.85rem]"><dt className="text-muted">Refundable security deposit (separate)</dt><dd>{gbp(quote.securityDepositPence)}</dd></div>
     </dl>

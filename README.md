@@ -19,7 +19,8 @@ npm run dev                           # http://localhost:3000
 ```
 
 Demo logins (`/account/sign-in`): owner `owner@hartleyandmoor.example / owner1234`,
-customer `customer@example.com / customer1234`.
+customer `customer@example.com / customer1234`. Coupon for testing: `SLOW10`
+(10% off bookings over £200, max 100 uses).
 
 Useful checks after seeding:
 
@@ -84,8 +85,16 @@ Notifications · Reports · Settings · Staff & audit.
 ## Architecture
 
 - `src/features/pricing/engine.ts` — the single pricing authority (per-night rates,
-  weekend rules, seasonal ×, weekly discount, fees, extras, coupons, VAT, deposit
-  split, immutable quote snapshots).
+  weekend Fri/Sat rules, per-night seasonal × from each night's own date, weekly
+  discount, fees, extras, coupons, VAT, deposit split, immutable quote snapshots).
+- `src/features/pricing/coupons.ts` — server-side coupon + extras resolution
+  (browser prices never trusted).
+- `src/features/availability/engine.ts` — pickup-inclusive/return-exclusive
+  intervals + 1-day prep buffer; overlap detection.
+- `src/features/availability/blocked.ts` — effective blocked nights for the picker.
+- `src/components/forms/DateRangePicker.tsx` — accessible range calendar with
+  blocked nights, keyboard arrows, live announcements.
+- `src/components/forms/Select.tsx` — accessible custom listbox dropdown.
 - `src/features/availability/engine.ts` — pickup-inclusive/return-exclusive
   intervals + 1-day prep buffer; overlap detection.
 - `src/features/bookings/stateMachine.ts` — 12-state reservation machine, only

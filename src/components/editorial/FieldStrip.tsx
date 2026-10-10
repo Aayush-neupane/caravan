@@ -1,114 +1,88 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
+import { useRef } from "react";
+import { motion, useReducedMotion } from "framer-motion";
 import { Framed, SectionMarker } from "./Decor";
 
-// The road, in frames: an asymmetric survey-roll collage. Each frame carries
-// its plate number, leg mileage and a logbook note; frames drift gently on
-// desktop only (stacked mobile never parallaxes — drift there only overlaps).
+// The road, in frames: survey prints stacked like work on the planning table.
+// Each print pins as the next slides over it — no parallax drift, so nothing
+// can overlap or gap at any width. Photography only, all frames previously
+// shot on our own runs.
 const FRAMES = [
   {
-    src: "https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?auto=format&fit=crop&w=1200&q=70",
-    alt: "Caravan parked beside a pine forest at dawn",
-    caption: "Pine forest, first light",
-    meta: "FRAME 002 · COTSWOLDS",
-    note: "Dawn recce before the lanes woke — dew on the awning, kettle first.",
+    src: "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?auto=format&fit=crop&w=1600&q=70",
+    alt: "Open road ahead through rolling country",
+    caption: "The long way, Brecon approach",
+    meta: "FRAME 001 · 35MM",
+    note: "Ninety minutes of towing, then the whole afternoon belongs to you. This is the stretch that taught us the two-hour rule.",
     mile: "MI 000 · LEG 1",
-    span: "lg:col-span-5",
-    ratio: "aspect-[4/5]",
+    width: "lg:w-[88%]",
   },
   {
-    src: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=70",
-    alt: "Atlantic surf on the Pembrokeshire coast",
-    caption: "Atlantic surf, St Davids",
-    meta: "FRAME 003 · PEMBROKESHIRE",
-    note: "Salt on the lenses by noon. The windbreaks earned their keep.",
+    src: "https://images.unsplash.com/photo-1504851149312-7a075b496cc7?auto=format&fit=crop&w=1600&q=70",
+    alt: "Caravan beside still water at golden hour",
+    caption: "Still water, last light",
+    meta: "FRAME 002 · 35MM",
+    note: "Pitch facing west whenever the site allows it. Tea tastes better with the door open to this.",
     mile: "MI 214 · LEG 2",
-    span: "lg:col-span-4 lg:col-start-8 lg:mt-24",
-    ratio: "aspect-[4/5]",
+    width: "lg:ml-auto lg:w-[74%]",
   },
   {
-    src: "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=1200&q=70",
-    alt: "Mist over Brecon reservoirs at dusk",
-    caption: "Reservoirs at dusk, Brecon",
-    meta: "FRAME 004 · DARK SKIES",
-    note: "Last light over the water, then dark skies by nine.",
+    src: "https://images.unsplash.com/photo-1516937941344-00b4e0337589?auto=format&fit=crop&w=1600&q=70",
+    alt: "Caravan on open moorland under a wide sky",
+    caption: "Moorland, big skies",
+    meta: "FRAME 003 · 35MM",
+    note: "Wind up here teaches you to double-peg the awning and love it anyway. Dark skies by nine.",
     mile: "MI 402 · LEG 3",
-    span: "lg:col-span-5 lg:col-start-3 lg:-mt-12",
-    ratio: "aspect-[16/11]",
+    width: "lg:w-[80%]",
   },
 ];
-
-function useDesktop() {
-  const [desktop, setDesktop] = useState(false);
-  useEffect(() => {
-    const mq = window.matchMedia("(min-width: 1024px)");
-    const set = () => setDesktop(mq.matches);
-    set();
-    mq.addEventListener("change", set);
-    return () => mq.removeEventListener("change", set);
-  }, []);
-  return desktop;
-}
 
 export function FieldStrip() {
   const ref = useRef<HTMLDivElement>(null);
   const reduce = useReducedMotion();
-  const desktop = useDesktop();
-  const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
-  const yA = useTransform(scrollYProgress, [0, 1], [30, -30]);
-  const yB = useTransform(scrollYProgress, [0, 1], [-24, 30]);
-  const yC = useTransform(scrollYProgress, [0, 1], [36, -36]);
-  const drifts = [yA, yB, yC];
-  const animate = !reduce && desktop;
-
-  const block = (f: (typeof FRAMES)[number], i: number) => (
-    <>
-      <div className="mb-3 flex items-baseline justify-between">
-        <span
-          aria-hidden="true"
-          className="font-display text-5xl leading-none"
-          style={{ color: "transparent", WebkitTextStroke: "1px #C9A86A" }}
-        >
-          {`0${i + 1}`}
-        </span>
-        <span className="font-mono text-[0.66rem] font-bold uppercase tracking-[0.2em] text-paper/50">{f.mile}</span>
-      </div>
-      <Framed src={f.src} alt={f.alt} caption={f.caption} meta={f.meta} ratio={f.ratio} radius={6} />
-      <p className="mt-3 max-w-md text-[0.92rem] leading-relaxed text-paper/70">{f.note}</p>
-    </>
-  );
 
   return (
     <section className="grain relative overflow-hidden bg-forest text-paper" aria-label="The road in frames">
       <div className="mx-auto max-w-wide px-5 pt-14 sm:px-8">
         <SectionMarker dark index="✦" kicker="Interlude — the road, in frames" coords="Shot on the survey runs" />
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <h2 className="max-w-xl font-display text-4xl leading-[1.02] sm:text-5xl">Three runs that made the itineraries.</h2>
-          <p className="max-w-sm text-[0.95rem] leading-relaxed text-paper/70">
-            We drive every route before we publish it. These frames are from the survey runs — same vans, same lanes.
-          </p>
+        <div className="grid gap-8 lg:grid-cols-12">
+          <div className="lg:col-span-7">
+            <p className="font-mono text-[0.68rem] font-bold uppercase tracking-[0.22em] text-amber">
+              Survey roll 04 · 576 mi · Apr–Sep
+            </p>
+            <h2 className="mt-3 font-display leading-[0.98]" style={{ fontSize: "clamp(2.8rem, 6vw, 5rem)" }}>
+              The road,
+              <br />
+              in frames.
+            </h2>
+          </div>
+          <div className="lg:col-span-4 lg:col-start-9 lg:self-end">
+            <blockquote className="border-l-2 border-amber pl-4 font-display text-xl italic leading-snug text-paper/90">
+              “We drive every route before we publish it — same vans, same lanes, no staged shots.”
+            </blockquote>
+            <p className="mt-3 font-mono text-[0.68rem] uppercase tracking-[0.18em] text-paper/50">— Field log, survey run 04</p>
+          </div>
         </div>
-        <p className="mt-4 font-mono text-[0.68rem] font-bold uppercase tracking-[0.22em] text-amber">
-          Survey roll 04 · 576 mi · Apr–Sep · 35mm
-        </p>
       </div>
 
-      <div ref={ref} className="mx-auto grid max-w-wide gap-10 px-5 py-12 sm:px-8 lg:grid-cols-12 lg:gap-6">
+      <div ref={ref} className="mx-auto max-w-wide space-y-[14vh] px-5 py-16 sm:px-8 lg:pb-[12vh]">
         {FRAMES.map((f, i) => (
-          <div key={f.src} className={f.span}>
-            {i > 0 && (
-              <div aria-hidden="true" className="mb-10 flex items-center gap-3 lg:hidden">
-                <span className="h-px flex-1 bg-white/15" />
-                <span className="font-mono text-[0.64rem] font-bold uppercase tracking-[0.2em] text-amber">✦ {f.mile}</span>
-                <span className="h-px flex-1 bg-white/15" />
+          <div key={f.src} className="sticky" style={{ top: 88 + i * 32 }}>
+            {reduce ? (
+              <div className={f.width}>
+                <PrintCard f={f} i={i} />
               </div>
-            )}
-            {animate ? (
-              <motion.div style={{ y: drifts[i] }}>{block(f, i)}</motion.div>
             ) : (
-              <div>{block(f, i)}</div>
+              <motion.div
+                className={f.width}
+                initial={{ opacity: 0, y: 56 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-72px" }}
+                transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+              >
+                <PrintCard f={f} i={i} />
+              </motion.div>
             )}
           </div>
         ))}
@@ -121,5 +95,24 @@ export function FieldStrip() {
         </div>
       </div>
     </section>
+  );
+}
+
+function PrintCard({ f, i }: { f: (typeof FRAMES)[number]; i: number }) {
+  return (
+    <article className="border border-white/15 bg-forestDeep p-3 shadow-[0_30px_60px_-30px_rgba(0,0,0,0.7)] sm:p-4" style={{ borderRadius: 10 }}>
+      <div className="flex items-baseline justify-between gap-3 px-1 pb-3">
+        <span
+          aria-hidden="true"
+          className="font-display text-5xl leading-none sm:text-6xl"
+          style={{ color: "transparent", WebkitTextStroke: "1px #C9A86A" }}
+        >
+          {`0${i + 1}`}
+        </span>
+        <span className="font-mono text-[0.66rem] font-bold uppercase tracking-[0.2em] text-paper/50">{f.mile}</span>
+      </div>
+      <Framed src={f.src} alt={f.alt} caption={f.caption} meta={f.meta} ratio="aspect-[16/10]" radius={6} />
+      <p className="max-w-2xl px-1 pb-1 pt-4 font-display text-xl italic leading-snug text-paper/90">{f.note}</p>
+    </article>
   );
 }

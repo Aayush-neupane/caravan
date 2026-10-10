@@ -27,8 +27,10 @@ export function CinematicHero() {
     }
   };
 
-  // CTA clicks first play the drive out to the end of the pin, then navigate.
-  // Reduced-motion (or an already-finishing click) keeps default behaviour.
+  // CTA clicks first drive the pin out to its end at normal travelling speed,
+  // then navigate. Reduced-motion (or an already-finishing click) keeps
+  // default behaviour. Constant velocity — no fast-forward: the send-off
+  // plays exactly as a calm manual scroll would.
   function finishAndGo(e: ReactMouseEvent, href: string) {
     if (reduce || leaving) return;
     const el = ref.current;
@@ -37,16 +39,19 @@ export function CinematicHero() {
     const start = window.scrollY;
     const pinTop = el.getBoundingClientRect().top + start;
     const target = Math.max(start, pinTop + el.offsetHeight - window.innerHeight);
-    if (target - start < 8) {
+    const remaining = target - start;
+    if (remaining < 8) {
       go(href);
       return;
     }
     setLeaving(true);
-    const dur = 1500;
+    // ~6s for a full pin at a reading pace, proportional when part-driven.
+    const total = el.offsetHeight - window.innerHeight;
+    const dur = Math.min(6000, Math.max(2000, (remaining / Math.max(1, total)) * 6000));
     const t0 = performance.now();
     const step = (t: number) => {
       const k = Math.min(1, (t - t0) / dur);
-      window.scrollTo(0, start + (target - start) * (1 - Math.pow(1 - k, 3)));
+      window.scrollTo(0, start + remaining * k);
       if (k < 1) requestAnimationFrame(step);
       else go(href);
     };

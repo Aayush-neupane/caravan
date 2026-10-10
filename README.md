@@ -66,11 +66,20 @@ Notifications · Reports · Settings · Staff & audit.
 
 ## Production notes
 
-- Database: local dev uses SQLite for zero-config runs. The schema uses no
-  provider-specific types — switch `provider` to `postgresql`, set `DATABASE_URL`,
-  and run `prisma migrate deploy` for Postgres. For true exclusion-constraint
-  overlap protection on Postgres, add an `EXCLUDE USING gist` migration on
-  active bookings (the app additionally guards in-transaction).
+- Database: local dev uses **SQLite** for zero-config runs — no, Postgres is not
+  currently used. The schema uses no provider-specific types, so switching is a
+  two-line change. **Using PostgreSQL** (recommended for production):
+  ```bash
+  docker compose up -d db
+  # in prisma/schema.prisma: provider = "sqlite" → "postgresql"
+  # in .env: DATABASE_URL="postgresql://hartley:hartley@localhost:5432/caravan"
+  npx prisma migrate deploy
+  npm run seed
+  ```
+  Managed options that work the same way: Neon, Supabase, RDS. For true
+  exclusion-constraint overlap protection on Postgres, add an
+  `EXCLUDE USING gist` migration on active bookings (the app additionally
+  guards in-transaction).
 - Storage: local dev keeps document paths as `private://` references. Production
   should use S3-compatible private buckets + signed URLs (see `src/lib/email.ts`
   and `CustomerDocument`); add malware scanning at upload.

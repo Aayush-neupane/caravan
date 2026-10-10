@@ -60,10 +60,16 @@ function SpinningFaceStatic({ cx }: { cx: number }) {
 // Direction of travel: RIGHT. The car leads, the caravan trails behind it
 // on the hitch — as a real outfit does.
 function Convoy({ spin, bob }: { spin?: MotionValue<number>; bob?: MotionValue<number> }) {
+  const arch = (cx: number) => (
+    <path d={`M${cx - 33},-4 A33,33 0 0 1 ${cx + 33},-4`} fill="none" stroke={SAND} strokeWidth={5} />
+  );
   const body = (
     <g>
       {/* ---- caravan (trailing, left) ---- */}
-      <rect x={8} y={-120} width={300} height={90} rx={9} fill={SAND} />
+      {/* status aerial */}
+      <line x1={120} y1={-120} x2={120} y2={-144} stroke={SAND} strokeWidth={3} />
+      <circle cx={120} cy={-146} r={3.5} fill={AMBER} />
+      <rect x={8} y={-120} width={300} height={90} rx={10} fill={SAND} />
       <rect x={8} y={-60} width={300} height={30} fill={FOREST} />
       <rect x={8} y={-64} width={300} height={4} fill={AMBER} />
       {/* rear lamps (left face) */}
@@ -75,10 +81,13 @@ function Convoy({ spin, bob }: { spin?: MotionValue<number>; bob?: MotionValue<n
       <line x1={46} y1={-106} x2={46} y2={-76} stroke={FOREST} strokeWidth={2.5} />
       <line x1={98} y1={-106} x2={98} y2={-76} stroke={FOREST} strokeWidth={2.5} />
       <line x1={245} y1={-106} x2={245} y2={-76} stroke={FOREST} strokeWidth={2.5} />
-      {/* door */}
+      {/* side locker outline */}
+      <rect x={196} y={-96} width={24} height={52} rx={2} fill="none" stroke={FOREST} strokeWidth={1.6} opacity={0.7} />
+      {/* door + grab handle */}
       <rect x={136} y={-106} width={32} height={76} fill="none" stroke={FOREST} strokeWidth={2.5} />
       <rect x={141} y={-100} width={22} height={22} fill={AMBER} />
       <circle cx={162} cy={-62} r={2.5} fill={FOREST} />
+      <line x1={172} y1={-96} x2={172} y2={-70} stroke={FOREST} strokeWidth={2.5} />
       <rect x={143} y={-30} width={18} height={8} fill={FOREST} opacity={0.7} />
       {/* roof gear */}
       <rect x={60} y={-130} width={42} height={10} rx={2} fill={SAND} />
@@ -95,7 +104,9 @@ function Convoy({ spin, bob }: { spin?: MotionValue<number>; bob?: MotionValue<n
       <text x={29} y={-47} textAnchor="middle" fontSize={8.5} fontWeight={800} fontFamily="Manrope, sans-serif" fill={FOREST} letterSpacing={0.5}>
         HM·01
       </text>
-      {/* mudflaps */}
+      {/* wheel arches + mudflaps */}
+      {arch(80)}
+      {arch(240)}
       <rect x={48} y={-24} width={10} height={16} fill={INK} />
       <rect x={208} y={-24} width={10} height={16} fill={INK} />
       {/* A-frame drawbar to the car */}
@@ -114,6 +125,9 @@ function Convoy({ spin, bob }: { spin?: MotionValue<number>; bob?: MotionValue<n
       <line x1={492} y1={-100} x2={500} y2={-70} stroke={SAND} strokeWidth={3} />
       <rect x={358} y={-98} width={56} height={26} fill={FOREST} />
       <line x1={386} y1={-98} x2={386} y2={-72} stroke={SAND} strokeWidth={2.5} />
+      {/* towing mirror, extended for the caravan's width */}
+      <line x1={512} y1={-80} x2={528} y2={-80} stroke={SAND} strokeWidth={3.5} />
+      <rect x={528} y={-88} width={12} height={14} rx={2} fill={SAND} stroke={FOREST} strokeWidth={1.5} />
       {/* waistline, doors, handles */}
       <rect x={350} y={-66} width={276} height={5} fill={FOREST} opacity={0.85} />
       <line x1={430} y1={-68} x2={430} y2={-30} stroke={FOREST} strokeWidth={2.5} opacity={0.6} />
@@ -122,9 +136,11 @@ function Convoy({ spin, bob }: { spin?: MotionValue<number>; bob?: MotionValue<n
       <rect x={494} y={-58} width={14} height={4} rx={2} fill={FOREST} />
       {/* roof rails */}
       <rect x={448} y={-116} width={70} height={6} rx={3} fill={SAND} opacity={0.9} />
-      {/* lamps: headlamp at the leading front, tail at the rear */}
-      <rect x={618} y={-52} width={8} height={11} fill={AMBER} />
+      {/* grille + bumper at the leading front, lamps both ends */}
+      <rect x={614} y={-46} width={12} height={16} fill={FOREST} />
+      <rect x={618} y={-56} width={8} height={9} fill={AMBER} />
       <rect x={350} y={-52} width={6} height={11} fill={AMBER} opacity={0.85} />
+      <rect x={606} y={-30} width={20} height={6} fill={INK} />
       {/* fleet plate on the tailgate */}
       <rect x={352} y={-40} width={30} height={10} fill="#F8F7F2" />
       <text x={367} y={-32.5} textAnchor="middle" fontSize={7.5} fontWeight={800} fontFamily="Manrope, sans-serif" fill={FOREST}>
@@ -132,6 +148,9 @@ function Convoy({ spin, bob }: { spin?: MotionValue<number>; bob?: MotionValue<n
       </text>
       {/* headlight beam on the road */}
       <polygon points="626,-50 800,-34 800,-6 626,-38" fill={AMBER} opacity={0.12} />
+      {/* wheel-arch flares */}
+      {arch(410)}
+      {arch(560)}
       {/* exhaust */}
       <rect x={358} y={-24} width={16} height={5} fill={INK} />
 
@@ -157,29 +176,53 @@ function Pine({ x, y, s, tone }: { x: number; y: number; s: number; tone: string
   );
 }
 
+// Village church on its hill — nave, spire and glowing belfry. Unmistakably
+// Cotswold; reads as a landmark, never a lighthouse.
 function Tower() {
   return (
     <g transform="translate(1180,432)">
-      <ellipse cx={0} cy={6} rx={168} ry={38} fill={PINEC} />
-      <Sheep x={-72} y={-2} s={1} />
-      <Sheep x={82} y={4} s={0.8} />
-      <Pine x={-120} y={0} s={1.5} tone={PINEC} />
-      <Pine x={-88} y={4} s={1.1} tone={DEEP} />
-      <Pine x={120} y={0} s={1.5} tone={PINEC} />
-      <Pine x={90} y={4} s={1.1} tone={DEEP} />
-      <path d="M-40,0 L-32,-252 L32,-252 L40,0 Z" fill={SAND} />
-      <line x1={-36} y1={-82} x2={36} y2={-82} stroke={FOREST} strokeWidth={3} opacity={0.45} />
-      <line x1={-34} y1={-162} x2={34} y2={-162} stroke={FOREST} strokeWidth={3} opacity={0.45} />
-      {[ -30, -12, 6, 24 ].map((x) => (
-        <rect key={x} x={x} y={-268} width={11} height={16} fill={SAND} />
+      <ellipse cx={0} cy={6} rx={190} ry={38} fill={PINEC} />
+      <Sheep x={-100} y={0} s={1} />
+      <Sheep x={108} y={6} s={0.8} />
+      <Pine x={-148} y={0} s={1.5} tone={PINEC} />
+      <Pine x={148} y={0} s={1.5} tone={PINEC} />
+      {/* nave */}
+      <rect x={-128} y={-96} width={132} height={96} fill={SAND} />
+      <polygon points="-136,-96 4,-96 -66,-148" fill={DEEP} />
+      <polygon points="-136,-96 4,-96 -66,-148" fill="none" stroke={SAND} strokeWidth={3} />
+      {/* buttresses */}
+      {[-112, -80, -48, -16].map((x) => (
+        <rect key={x} x={x} y={-96} width={7} height={96} fill={SAND} stroke={FOREST} strokeWidth={1.5} opacity={0.9} />
       ))}
-      <rect x={-22} y={-228} width={15} height={52} rx={7.5} fill={FOREST} />
-      <rect x={-34} y={-142} width={12} height={38} rx={6} fill={FOREST} />
-      <rect x={22} y={-142} width={12} height={38} rx={6} fill={FOREST} />
-      <path d="M-13,0 L-13,-44 Q-13,-54 0,-54 Q13,-54 13,-44 L13,0 Z" fill={FOREST} />
-      <line x1={0} y1={-268} x2={0} y2={-300} stroke={SAND} strokeWidth={3.5} />
-      {/* pennant streams backward — the outfit is moving */}
-      <polygon points="0,-300 -34,-291 0,-282" fill={AMBER} />
+      {/* glowing nave windows */}
+      {[-96, -64, -32].map((x) => (
+        <rect key={x} x={x} y={-72} width={13} height={34} rx={6.5} fill={AMBER} />
+      ))}
+      {/* porch + door */}
+      <rect x={-150} y={-52} width={26} height={52} fill={SAND} />
+      <polygon points="-153,-52 -121,-52 -137,-66" fill={DEEP} />
+      <path d="M-143,-0 L-143,-30 Q-143,-38 -137,-38 Q-131,-38 -131,-30 L-131,0 Z" fill={FOREST} />
+      {/* west tower */}
+      <rect x={4} y={-196} width={64} height={196} fill={SAND} />
+      <line x1={4} y1={-120} x2={68} y2={-120} stroke={FOREST} strokeWidth={3} opacity={0.45} />
+      {[10, 28, 46].map((x) => (
+        <rect key={x} x={x} y={-212} width={11} height={16} fill={SAND} />
+      ))}
+      {/* belfry openings, lit */}
+      <rect x={16} y={-186} width={13} height={30} rx={6.5} fill={AMBER} />
+      <rect x={43} y={-186} width={13} height={30} rx={6.5} fill={AMBER} />
+      <line x1={22.5} y1={-186} x2={22.5} y2={-156} stroke={FOREST} strokeWidth={2} />
+      <line x1={49.5} y1={-186} x2={49.5} y2={-156} stroke={FOREST} strokeWidth={2} />
+      {/* clock */}
+      <circle cx={36} cy={-102} r={13} fill="#F8F7F2" />
+      <line x1={36} y1={-102} x2={36} y2={-111} stroke={FOREST} strokeWidth={2.4} />
+      <line x1={36} y1={-102} x2={42} y2={-99} stroke={FOREST} strokeWidth={2.4} />
+      {/* spire + weathercock */}
+      <polygon points="4,-196 68,-196 36,-272" fill={DEEP} stroke={SAND} strokeWidth={2.5} />
+      <line x1={36} y1={-272} x2={36} y2={-288} stroke={SAND} strokeWidth={3} />
+      <circle cx={36} cy={-290} r={3} fill={AMBER} />
+      {/* west door */}
+      <path d="M26,-0 L26,-40 Q26,-50 36,-50 Q46,-50 46,-40 L46,0 Z" fill={FOREST} />
     </g>
   );
 }
@@ -215,7 +258,7 @@ export function DriveScene() {
       preserveAspectRatio="xMidYMax slice"
       className="absolute inset-0 h-full w-full"
       role="img"
-      aria-label="Illustration: a tow car towing a caravan past hills, pines and a stone tower at dusk"
+      aria-label="Illustration: a tow car towing a caravan past hills, pines and a village church at dusk"
     >
       {/* stars */}
       {[
@@ -226,9 +269,9 @@ export function DriveScene() {
       ))}
       {/* dusk band lifting the horizon */}
       <rect x={0} y={330} width={1440} height={142} fill="#212B22" />
-      {/* sun, sinking toward the ridge the outfit drives into */}
-      <circle cx={1150} cy={332} r={62} fill="none" stroke={AMBER} strokeOpacity={0.35} strokeWidth={1.5} />
-      <circle cx={1150} cy={332} r={46} fill={AMBER} />
+      {/* sun, sinking onto the open ridge — clear of the church */}
+      <circle cx={700} cy={348} r={62} fill="none" stroke={AMBER} strokeOpacity={0.35} strokeWidth={1.5} />
+      <circle cx={700} cy={348} r={46} fill={AMBER} />
       {/* birds heading home, same direction as the outfit */}
       <g stroke={SAND} strokeOpacity={0.6} strokeWidth={2.2} fill="none" strokeLinecap="round">
         <path d="M920,110 q10,-10 20,0 q10,-10 20,0" />

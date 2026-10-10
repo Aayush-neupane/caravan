@@ -2,13 +2,26 @@ import Link from "next/link";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions, isStaff } from "@/lib/auth";
+import { AdminSignOut } from "./signout";
+import { AdminFade } from "./fade";
 
-const ITEMS = [
-  ["Overview", "/admin"], ["Bookings", "/admin/bookings"], ["Calendar", "/admin/calendar"],
-  ["Fleet", "/admin/fleet"], ["Customers", "/admin/customers"], ["Documents", "/admin/documents"],
-  ["Pricing", "/admin/pricing"], ["Coupons", "/admin/coupons"], ["Payments", "/admin/payments"],
-  ["Maintenance", "/admin/maintenance"], ["Reviews", "/admin/reviews"], ["Content", "/admin/content"],
-  ["Notifications", "/admin/notifications"], ["Reports", "/admin/reports"], ["Settings", "/admin/settings"], ["Staff", "/admin/staff"],
+const GROUPS: { title: string; items: [string, string][] }[] = [
+  {
+    title: "Operate",
+    items: [["Overview", "/admin"], ["Bookings", "/admin/bookings"], ["Calendar", "/admin/calendar"], ["Documents", "/admin/documents"]],
+  },
+  {
+    title: "Business",
+    items: [["Fleet", "/admin/fleet"], ["Pricing", "/admin/pricing"], ["Coupons", "/admin/coupons"], ["Payments", "/admin/payments"], ["Maintenance", "/admin/maintenance"]],
+  },
+  {
+    title: "Guests",
+    items: [["Customers", "/admin/customers"], ["Reviews", "/admin/reviews"], ["Notifications", "/admin/notifications"]],
+  },
+  {
+    title: "System",
+    items: [["Content", "/admin/content"], ["Reports", "/admin/reports"], ["Settings", "/admin/settings"], ["Staff", "/admin/staff"]],
+  },
 ];
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -16,25 +29,50 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const role = (session?.user as { role?: string } | undefined)?.role;
   if (!session) redirect("/account/sign-in");
   if (!isStaff(role)) redirect("/account?error=staff_only");
+
   return (
-    <div className="bg-paper">
-      <div className="border-b border-border bg-forest text-paper">
-        <div className="mx-auto flex max-w-wide items-center justify-between px-5 py-3 sm:px-8">
-          <p className="text-[0.85rem]"><strong>Hartley &amp; Moor</strong> · Operations · <span className="text-paper/70">{session.user?.email} ({role})</span></p>
-          <Link href="/" className="text-[0.82rem] underline">← View site</Link>
+    <div className="min-h-screen bg-[#EFEDE6] lg:grid lg:grid-cols-[15rem_1fr]">
+      {/* Sidebar */}
+      <aside className="bg-forest text-paper lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto">
+        <div className="flex items-center justify-between px-5 pb-4 pt-5 lg:block">
+          <div>
+            <p className="font-display text-[1.4rem] leading-none">Hartley <span className="text-amber">&amp;</span> Moor</p>
+            <p className="mt-1.5 text-[0.68rem] font-bold uppercase tracking-[0.18em] text-paper/55">Operations</p>
+          </div>
+          <Link href="/" className="text-[0.8rem] text-paper/70 underline underline-offset-2 hover:text-white lg:mt-3 lg:inline-block">
+            ← View site
+          </Link>
         </div>
-      </div>
-      <div className="mx-auto grid max-w-wide gap-0 px-0 sm:px-8 lg:grid-cols-12">
-        <nav className="border-b border-border bg-white px-5 py-4 lg:col-span-3 lg:border-b-0 lg:border-r lg:px-4" aria-label="Admin">
-          <ul className="flex gap-2 overflow-x-auto lg:grid">
-            {ITEMS.map(([label, href]) => (
-              <li key={href + label} className="shrink-0">
-                <Link href={href} className="block border border-border bg-paper px-3 py-2 text-[0.83rem] font-semibold text-charcoal hover:border-forest" style={{ borderRadius: 6 }}>{label}</Link>
-              </li>
-            ))}
-          </ul>
+        <nav className="flex gap-4 overflow-x-auto px-5 pb-4 lg:grid lg:gap-5 lg:overflow-visible lg:px-4" aria-label="Admin">
+          {GROUPS.map((g) => (
+            <div key={g.title} className="min-w-36 shrink-0 lg:min-w-0">
+              <p className="hidden text-[0.66rem] font-bold uppercase tracking-[0.16em] text-paper/45 lg:mb-1.5 lg:block">{g.title}</p>
+              <ul className="flex gap-1.5 lg:grid">
+                {g.items.map(([label, href]) => (
+                  <li key={href}>
+                    <Link
+                      href={href}
+                      className="block whitespace-nowrap px-3 py-2 text-[0.85rem] font-medium text-paper/80 transition-colors hover:bg-white/10 hover:text-white"
+                      style={{ borderRadius: 6 }}
+                    >
+                      <span className="lg:hidden">{g.title} · </span>{label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+          <div className="min-w-36 shrink-0 border-t border-white/15 pt-3 lg:min-w-0">
+            <p className="truncate px-1 text-[0.75rem] text-paper/55">{session.user?.email}</p>
+            <p className="px-1 text-[0.72rem] font-bold uppercase tracking-wider text-amber">{role}</p>
+            <div className="mt-2 px-1"><AdminSignOut /></div>
+          </div>
         </nav>
-        <div className="px-5 py-6 sm:px-2 lg:col-span-9 lg:px-6">{children}</div>
+      </aside>
+
+      {/* Content */}
+      <div className="min-w-0 px-4 py-6 sm:px-8 sm:py-8">
+        <AdminFade>{children}</AdminFade>
       </div>
     </div>
   );

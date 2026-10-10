@@ -34,6 +34,9 @@ export function CinematicHero() {
           </div>
           <p className="font-display text-xl">From {gbp(9500)} <span className="font-sans text-sm text-paper/60">/ night · sleeps 2–4</span></p>
         </div>
+        <p className="mt-6 font-mono text-[0.68rem] font-bold uppercase tracking-[0.22em] text-amber" aria-hidden="true">
+          Dep 18:40 · Lansdown → West · Lights on · Mist lifting
+        </p>
         <p className="mt-8 font-mono text-[0.66rem] font-bold uppercase tracking-[0.24em] text-paper/60" aria-hidden="true">
           Scroll — the yard rolls past
           <span className="mt-2 block h-8 w-px bg-paper/50" />

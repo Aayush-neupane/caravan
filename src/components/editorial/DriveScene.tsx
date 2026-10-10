@@ -90,6 +90,11 @@ function Convoy({ spin, bob }: { spin?: MotionValue<number>; bob?: MotionValue<n
       <circle cx={30} cy={-45} r={3} fill={AMBER} />
       <circle cx={180} cy={-45} r={3} fill={AMBER} />
       <circle cx={294} cy={-45} r={3} fill={AMBER} />
+      {/* fleet plate */}
+      <rect x={12} y={-56} width={34} height={12} fill={SAND} />
+      <text x={29} y={-47} textAnchor="middle" fontSize={8.5} fontWeight={800} fontFamily="Manrope, sans-serif" fill={FOREST} letterSpacing={0.5}>
+        HM·01
+      </text>
       {/* mudflaps */}
       <rect x={48} y={-24} width={10} height={16} fill={INK} />
       <rect x={208} y={-24} width={10} height={16} fill={INK} />
@@ -120,6 +125,11 @@ function Convoy({ spin, bob }: { spin?: MotionValue<number>; bob?: MotionValue<n
       {/* lamps: headlamp at the leading front, tail at the rear */}
       <rect x={618} y={-52} width={8} height={11} fill={AMBER} />
       <rect x={350} y={-52} width={6} height={11} fill={AMBER} opacity={0.85} />
+      {/* fleet plate on the tailgate */}
+      <rect x={352} y={-40} width={30} height={10} fill="#F8F7F2" />
+      <text x={367} y={-32.5} textAnchor="middle" fontSize={7.5} fontWeight={800} fontFamily="Manrope, sans-serif" fill={FOREST}>
+        HM·02
+      </text>
       {/* headlight beam on the road */}
       <polygon points="626,-50 800,-34 800,-6 626,-38" fill={AMBER} opacity={0.12} />
       {/* exhaust */}
@@ -151,6 +161,8 @@ function Tower() {
   return (
     <g transform="translate(1180,432)">
       <ellipse cx={0} cy={6} rx={168} ry={38} fill={PINEC} />
+      <Sheep x={-72} y={-2} s={1} />
+      <Sheep x={82} y={4} s={0.8} />
       <Pine x={-120} y={0} s={1.5} tone={PINEC} />
       <Pine x={-88} y={4} s={1.1} tone={DEEP} />
       <Pine x={120} y={0} s={1.5} tone={PINEC} />
@@ -166,7 +178,19 @@ function Tower() {
       <rect x={22} y={-142} width={12} height={38} rx={6} fill={FOREST} />
       <path d="M-13,0 L-13,-44 Q-13,-54 0,-54 Q13,-54 13,-44 L13,0 Z" fill={FOREST} />
       <line x1={0} y1={-268} x2={0} y2={-300} stroke={SAND} strokeWidth={3.5} />
-      <polygon points="0,-300 34,-291 0,-282" fill={AMBER} />
+      {/* pennant streams backward — the outfit is moving */}
+      <polygon points="0,-300 -34,-291 0,-282" fill={AMBER} />
+    </g>
+  );
+}
+
+function Sheep({ x, y, s = 1 }: { x: number; y: number; s?: number }) {
+  return (
+    <g transform={`translate(${x},${y}) scale(${s})`}>
+      <ellipse cx={0} cy={0} rx={14} ry={9} fill={SAND} />
+      <circle cx={13} cy={-4} r={4.5} fill={FOREST} />
+      <line x1={-7} y1={8} x2={-7} y2={15} stroke={FOREST} strokeWidth={2.5} />
+      <line x1={7} y1={8} x2={7} y2={15} stroke={FOREST} strokeWidth={2.5} />
     </g>
   );
 }
@@ -200,10 +224,12 @@ export function DriveScene() {
       ].map(([x, y], i) => (
         <circle key={i} cx={x} cy={y} r={1.7} fill={SAND} opacity={0.45} />
       ))}
-      {/* sun, right of the headline */}
-      <circle cx={1150} cy={170} r={60} fill="none" stroke={AMBER} strokeOpacity={0.35} strokeWidth={1.5} />
-      <circle cx={1150} cy={170} r={44} fill={AMBER} />
-      {/* birds */}
+      {/* dusk band lifting the horizon */}
+      <rect x={0} y={330} width={1440} height={142} fill="#212B22" />
+      {/* sun, sinking toward the ridge the outfit drives into */}
+      <circle cx={1150} cy={332} r={62} fill="none" stroke={AMBER} strokeOpacity={0.35} strokeWidth={1.5} />
+      <circle cx={1150} cy={332} r={46} fill={AMBER} />
+      {/* birds heading home, same direction as the outfit */}
       <g stroke={SAND} strokeOpacity={0.6} strokeWidth={2.2} fill="none" strokeLinecap="round">
         <path d="M920,110 q10,-10 20,0 q10,-10 20,0" />
         <path d="M992,142 q8,-8 16,0 q8,-8 16,0" />
@@ -255,6 +281,24 @@ export function DriveScene() {
             <rect x={x - 30} y={308} width={71} height={9} fill={INK} />
           </g>
         ))}
+        {/* two birds riding the wire */}
+        <g stroke={SAND} strokeWidth={2} fill="none" strokeLinecap="round">
+          <path d="M594,310 q3.5,-7 7,0 q3.5,-7 7,0" />
+          <path d="M636,313 q3,-6 6,0 q3,-6 6,0" />
+        </g>
+        {/* the depot gate: where every hire begins */}
+        <g>
+          <rect x={36} y={336} width={13} height={136} fill={INK} />
+          <rect x={171} y={336} width={13} height={136} fill={INK} />
+          <rect x={24} y={326} width={172} height={12} fill={INK} />
+          <rect x={58} y={342} width={104} height={38} fill={SAND} />
+          <text x={110} y={357} textAnchor="middle" fontSize={13} fontWeight={800} fontFamily="Manrope, sans-serif" fill={FOREST} letterSpacing={1.5}>
+            LANSDOWN
+          </text>
+          <text x={110} y={371} textAnchor="middle" fontSize={9.5} fontWeight={700} fontFamily="Manrope, sans-serif" fill={FOREST} letterSpacing={2}>
+            DEPOT · TOW OUT
+          </text>
+        </g>
       </motion.g>
 
       {/* road */}

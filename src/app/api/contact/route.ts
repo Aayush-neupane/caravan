@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
+import { gateMutation } from "@/lib/security";
 
 const Body = z.object({
   name: z.string().min(2).max(80),
@@ -10,6 +11,8 @@ const Body = z.object({
 });
 
 export async function POST(req: Request) {
+  const denied = gateMutation(req, "contact:post", 5, 60_000);
+  if (denied) return denied;
   let body: z.infer<typeof Body>;
   try {
     body = Body.parse(await req.json());

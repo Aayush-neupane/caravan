@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { z } from "zod";
-import { authOptions, canAdminister } from "@/lib/auth";
+import { authOptions, can } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { gateMutation } from "@/lib/security";
 import { priceQuote } from "@/features/pricing/engine";
 import { isAvailable, validateStay } from "@/features/availability/engine";
 import { BLOCKING_STATUSES } from "@/features/bookings/stateMachine";
@@ -30,9 +31,11 @@ const Body = z.object({
 // Same availability guard as public checkout; priced by the same engine;
 // created directly as confirmed with an audit trail.
 export async function POST(req: Request) {
+  const denied = gateMutation(req, "admin:bookings", 60, 60_000);
+  if (denied) return denied;
   const session = await getServerSession(authOptions);
   const role = (session?.user as { role?: string } | undefined)?.role;
-  if (!session || !canAdminister(role)) return NextResponse.json({ error: "Staff access required." }, { status: 403 });
+  if (!session || !can("bookings:write", role)) return NextResponse.json({ error: "Staff access required." }, { status: 403 });
 
   let body: z.infer<typeof Body>;
   try {

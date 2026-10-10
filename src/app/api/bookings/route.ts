@@ -8,6 +8,7 @@ import { makeReference } from "@/lib/format";
 import { CARAVANS } from "@/data/catalogue";
 import { resolveCoupon, resolveExtras } from "@/features/pricing/coupons";
 import { sendNotification, bookingEmailBodies } from "@/lib/email";
+import { gateMutation } from "@/lib/security";
 
 const CreateBody = z.object({
   slug: z.string(),
@@ -31,6 +32,8 @@ const CreateBody = z.object({
 
 // POST /api/bookings — creates hold + booking atomically with revalidated availability.
 export async function POST(req: Request) {
+  const denied = gateMutation(req, "bookings:post", 10, 60_000);
+  if (denied) return denied;
   let body: z.infer<typeof CreateBody>;
   try {
     body = CreateBody.parse(await req.json());

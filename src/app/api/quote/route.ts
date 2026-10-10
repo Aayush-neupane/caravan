@@ -6,6 +6,7 @@ import { isAvailable, validateStay } from "@/features/availability/engine";
 import { BLOCKING_STATUSES } from "@/features/bookings/stateMachine";
 import { resolveCoupon, resolveExtras } from "@/features/pricing/coupons";
 import { CARAVANS } from "@/data/catalogue";
+import { gateMutation } from "@/lib/security";
 
 const Body = z.object({
   slug: z.string(),
@@ -18,6 +19,8 @@ const Body = z.object({
 
 // POST /api/quote — server-side availability + itemised pricing. Never trusts browser totals.
 export async function POST(req: Request) {
+  const denied = gateMutation(req, "quote:post", 30, 60_000);
+  if (denied) return denied;
   let body: z.infer<typeof Body>;
   try {
     body = Body.parse(await req.json());

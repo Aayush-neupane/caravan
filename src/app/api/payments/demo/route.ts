@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { createPaymentIntent, confirmDemoPayment } from "@/features/payments/provider";
 import { sendNotification } from "@/lib/email";
+import { gateMutation } from "@/lib/security";
 
 // POST /api/payments/demo — create + confirm a labelled DEMO payment.
 // Disabled when live Stripe keys are configured (prevents zero-money
@@ -13,6 +14,8 @@ const Body = z.object({
 }).strict();
 
 export async function POST(req: Request) {
+  const denied = gateMutation(req, "payments:demo", 20, 60_000);
+  if (denied) return denied;
   if (process.env.STRIPE_SECRET_KEY) {
     return NextResponse.json({ error: "Demo payments are disabled when Stripe is configured." }, { status: 403 });
   }

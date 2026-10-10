@@ -1,17 +1,20 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { z } from "zod";
-import { authOptions, canAdminister } from "@/lib/auth";
+import { authOptions, can } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { gateMutation } from "@/lib/security";
 import { assertTransition, BOOKING_STATUSES } from "@/features/bookings/stateMachine";
 
 const ActionSchema = z.object({ action: z.enum([...BOOKING_STATUSES, "refund_deposit"] as [string, ...string[]]) }).strict();
 
 // PATCH /api/admin/bookings/:id — controlled status transitions, cancellation + deposit refund.
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+  const denied = gateMutation(req, "admin:bookings", 60, 60_000);
+  if (denied) return denied;
   const session = await getServerSession(authOptions);
   const role = (session?.user as { role?: string } | undefined)?.role;
-  if (!session || !canAdminister(role)) return NextResponse.json({ error: "Staff access required." }, { status: 403 });
+  if (!session || !can("bookings:write", role)) return NextResponse.json({ error: "Staff access required." }, { status: 403 });
 
   let action: string;
   try {
@@ -26,9 +29,10 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     if (!booking) return NextResponse.json({ error: "Not found." }, { status: 404 });
 
     if (action === "refund_deposit") {
-      // Single release, only after the hire completes. Repeat calls return
-      // the original refund instead of creating duplicates; real money
-      // movement happens in Stripe (recorded status here for demo ledger).
+      // Single release, only after the hire completes, owner/admin only.
+      if (!can("refunds:write", role)) {
+        return NextResponse.json({ error: "Deposit release requires an owner or admin." }, { status: 403 });
+      }
       if (booking.status !== "completed") {
         return NextResponse.json({ error: `Deposit can only be released from completed hires (booking is ${booking.status}).` }, { status: 422 });
       }

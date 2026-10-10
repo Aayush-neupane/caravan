@@ -1,18 +1,20 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { z } from "zod";
-import { authOptions, isStaff } from "@/lib/auth";
+import { authOptions, can } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { gateMutation } from "@/lib/security";
 
 const Body = z.object({ published: z.boolean() });
 
 // PATCH /api/admin/fleet/:slug — publish / unpublish. Unpublishing never
 // deletes history; response includes future-booking count as the warning.
 export async function PATCH(req: Request, { params }: { params: { slug: string } }) {
+  const denied = gateMutation(req, "admin:fleet", 60, 60_000);
+  if (denied) return denied;
   const session = await getServerSession(authOptions);
   const role = (session?.user as { role?: string } | undefined)?.role;
-  if (!session || !isStaff(role)) return NextResponse.json({ error: "Staff access required." }, { status: 403 });
-  if (!["owner", "admin", "fleet_manager"].includes(role!)) {
+  if (!session || !can("fleet:write", role)) {
     return NextResponse.json({ error: "Fleet manager role required." }, { status: 403 });
   }
 

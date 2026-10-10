@@ -1,8 +1,9 @@
-// Hartley & Moor offline fallback. Navigations try the network first; on
-// failure the cached /offline page (bare dusk drive) serves instead of the
-// browser's default offline game. API/XHR requests are never intercepted.
-// Bump CACHE to ship a fresh fallback.
-const CACHE = "hm-offline-v1";
+// Hartley & Moor offline fallback. Same-origin GETs (documents, chunks,
+// styles, images) are cached as browsed; navigations try the network first
+// and fall back to the cached /offline page (bare dusk drive) instead of the
+// browser's default offline game. API/XHR traffic is network-only.
+// Bump CACHE to ship a fresh worker + fallback.
+const CACHE = "hm-offline-v2";
 const FALLBACK = "/offline";
 
 self.addEventListener("install", (event) => {
@@ -26,12 +27,11 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   const { request } = event;
-  // Documents only: let APIs, images and other subresources fail naturally.
-  if (request.method !== "GET" || request.mode !== "navigate") return;
+  if (request.method !== "GET") return;
   event.respondWith(
     fetch(request)
       .then((res) => {
-        if (res.ok && new URL(request.url).origin === self.location.origin) {
+        if (res && (res.ok || res.type === "opaque")) {
           const copy = res.clone();
           caches
             .open(CACHE)
@@ -40,8 +40,14 @@ self.addEventListener("fetch", (event) => {
         }
         return res;
       })
-      .catch(() =>
-        caches.match(FALLBACK).then((fallback) => fallback || Response.error())
-      )
+      .catch(async () => {
+        const cached = await caches.match(request);
+        if (cached) return cached;
+        if (request.mode === "navigate") {
+          const fallback = await caches.match(FALLBACK);
+          if (fallback) return fallback;
+        }
+        throw new Error("offline");
+      })
   );
 });

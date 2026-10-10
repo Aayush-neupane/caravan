@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
-import { DataTable, EmptyState, StatusBadge } from "@/components/admin/ui";
+import { DataTable, EmptyState } from "@/components/admin/ui";
+import { DocReview } from "./review";
 
 export const metadata = { title: "Documents", robots: { index: false, follow: false } };
 
@@ -19,13 +20,13 @@ export default async function DocumentsAdmin() {
         {rows.length === 0 ? (
           <EmptyState title="Queue is empty" body="Seed includes one driving licence awaiting approval. New uploads land here instantly." />
         ) : (
-          <DataTable headers={["Booking", "Kind", "File", "Status"]} caption="Documents awaiting review">
+          <DataTable headers={["Booking", "Kind", "File", "Review"]} caption="Documents awaiting review">
             {rows.map((r) => (
               <tr key={r.id}>
                 <td className="font-mono font-bold">{r.booking}</td>
                 <td>{r.kind.replace(/_/g, " ")}</td>
                 <td className="font-mono text-[0.8rem]">{r.file}</td>
-                <td><StatusBadge status={r.status} /></td>
+                <td><DocReview id={r.id} status={r.status} /></td>
               </tr>
             ))}
           </DataTable>

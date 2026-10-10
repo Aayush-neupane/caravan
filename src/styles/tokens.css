@@ -1,0 +1,28 @@
+/* Hartley & Moor — design tokens.
+   Quiet luxury: forest / paper / sand structure, amber used sparingly.
+   No gradients, no glassmorphism, no glow. Solid surfaces, hairline borders. */
+
+:root {
+  --forest: #1a2b23;
+  --forest-deep: #122019;
+  --sand: #ede6d6;
+  --charcoal: #111111;
+  --amber: #c9a86a;
+  --paper: #f8f7f2;
+  --white: #ffffff;
+  --muted: #686b65;
+  --border: #dcddd5;
+  --success: #286548;
+  --warning: #8a5b19;
+  --error: #a43c32;
+
+  --font-display: "Cormorant Garamond", Georgia, serif;
+  --font-sans: "Manrope", system-ui, sans-serif;
+
+  --radius-sm: 3px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+
+  --content-max: 76rem;
+  --wide-max: 88rem;
+}

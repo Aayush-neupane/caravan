@@ -1,0 +1,432 @@
+// Hartley & Moor — authoritative relational model.
+// Local dev uses SQLite (file:./dev.db) for zero-config runs.
+// Production uses PostgreSQL: change provider to "postgresql" and set DATABASE_URL.
+// The schema avoids provider-specific native types so the same model migrates cleanly.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  passwordHash  String?
+  role          String    @default("customer") // customer | owner | admin | booking_manager | fleet_manager | document_reviewer | support | analyst
+  emailVerified DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  customer      CustomerProfile?
+  auditLogs     AuditLog[]
+}
+
+model CustomerProfile {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  phone     String?
+  address   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  bookings  Booking[]
+}
+
+model Location {
+  id        String    @id @default(cuid())
+  name      String
+  address   String
+  pickupNotes String?
+  active    Boolean   @default(true)
+  caravans  Caravan[]
+}
+
+model CaravanCategory {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  slug        String    @unique
+  description String
+  caravans    Caravan[]
+}
+
+model Caravan {
+  id              String           @id @default(cuid())
+  name            String
+  slug            String           @unique
+  tagline         String
+  description     String
+  categoryId      String
+  category        CaravanCategory  @relation(fields: [categoryId], references: [id])
+  locationId      String?
+  location        Location?        @relation(fields: [locationId], references: [id])
+  berths          Int
+  maxTravellers   Int
+  baseNightlyPence Int
+  weekendNightlyPence Int?
+  weeklyDiscountPct Int           @default(0)
+  minNights       Int              @default(2)
+  maxNights       Int              @default(28)
+  cleaningFeePence Int            @default(8500)
+  securityDepositPence Int        @default(50000)
+  mileagePerNight Int             @default(100)
+  excessMileagePencePerMile Int    @default(35)
+  mtplmKg         Int
+  unladenKg       Int?
+  lengthM         Float
+  widthM          Float
+  offRoad         Boolean          @default(false)
+  shower          Boolean          @default(true)
+  toilet          Boolean          @default(true)
+  heating         Boolean          @default(true)
+  kitchen         String           @default("Fitted kitchen")
+  published       Boolean          @default(true)
+  archived        Boolean          @default(false)
+  towRequirement  String           @default("Towing vehicle min. 1,800kg braked capacity. Category B licence (post-1997 limits apply).")
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  images          CaravanImage[]
+  bookings        Booking[]
+  holds           BookingHold[]
+  blocks          AvailabilityBlock[]
+  maintenance     MaintenanceRecord[]
+  extras          CaravanExtra[]
+}
+
+model CaravanImage {
+  id        String  @id @default(cuid())
+  caravanId String
+  caravan   Caravan @relation(fields: [caravanId], references: [id], onDelete: Cascade)
+  url       String
+  alt       String
+  kind      String  @default("exterior") // exterior | interior | sleeping | kitchen | bathroom | storage | living | floorplan
+  sort      Int     @default(0)
+}
+
+model Extra {
+  id             String   @id @default(cuid())
+  name           String
+  slug           String   @unique
+  description    String
+  pricePence     Int
+  unit           String   @default("per_rental") // per_rental | per_night | per_item
+  maxQty         Int      @default(4)
+  active         Boolean  @default(true)
+  caravans       CaravanExtra[]
+  bookingItems   BookingExtraItem[]
+}
+
+model CaravanExtra {
+  caravanId String
+  caravan   Caravan @relation(fields: [caravanId], references: [id], onDelete: Cascade)
+  extraId   String
+  extra     Extra   @relation(fields: [extraId], references: [id], onDelete: Cascade)
+  @@id([caravanId, extraId])
+}
+
+model Booking {
+  id               String   @id @default(cuid())
+  reference        String   @unique
+  caravanId        String
+  caravan          Caravan  @relation(fields: [caravanId], references: [id])
+  customerId       String?
+  customer         CustomerProfile? @relation(fields: [customerId], references: [id])
+  guestName        String?
+  guestEmail       String?
+  guestPhone       String?
+  pickupDate       DateTime
+  returnDate       DateTime
+  travellers       Int      @default(2)
+  status           String   @default("held") // draft|held|awaiting_payment|awaiting_documents|confirmed|ready|active|completed|cancel_requested|cancelled|expired|payment_review
+  subtotalPence    Int
+  discountPence    Int      @default(0)
+  feesPence        Int      @default(0)
+  extrasPence      Int      @default(0)
+  taxPence         Int      @default(0)
+  totalPence       Int
+  depositDuePence  Int
+  securityDepositPence Int
+  currency         String   @default("GBP")
+  quoteSnapshot    String   // JSON immutable pricing snapshot
+  agreementVersion String?
+  agreementAcceptedAt DateTime?
+  cancelledAt      DateTime?
+  cancelReason     String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  statusHistory    BookingStatusHistory[]
+  extras           BookingExtraItem[]
+  payments         Payment[]
+  refunds          Refund[]
+  documents        CustomerDocument[]
+  agreement        RentalAgreement?
+  inspection       ReturnInspection?
+  driver           BookingDriver?
+  towVehicle       TowingVehicle?
+  notifications    Notification[]
+}
+
+model BookingStatusHistory {
+  id        String   @id @default(cuid())
+  bookingId String
+  booking   Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  from      String?
+  to        String
+  actor     String?
+  note      String?
+  createdAt DateTime @default(now())
+}
+
+model BookingHold {
+  id        String   @id @default(cuid())
+  caravanId String
+  caravan   Caravan  @relation(fields: [caravanId], references: [id], onDelete: Cascade)
+  pickupDate DateTime
+  returnDate DateTime
+  token     String   @unique
+  bookingId String?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model AvailabilityBlock {
+  id        String   @id @default(cuid())
+  caravanId String
+  caravan   Caravan  @relation(fields: [caravanId], references: [id], onDelete: Cascade)
+  startDate DateTime
+  endDate   DateTime
+  reason    String
+  createdAt DateTime @default(now())
+}
+
+model BookingDriver {
+  id          String  @id @default(cuid())
+  bookingId   String  @unique
+  booking     Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  fullName    String
+  licenceNo   String?
+  licenceCountry String @default("United Kingdom")
+  dateOfBirth String?
+  declaration String?
+}
+
+model TowingVehicle {
+  id        String  @id @default(cuid())
+  bookingId String  @unique
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  make      String
+  model     String
+  brakedCapacityKg Int?
+  towbar    String?
+}
+
+model BookingExtraItem {
+  id        String  @id @default(cuid())
+  bookingId String
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  extraId   String
+  extra     Extra   @relation(fields: [extraId], references: [id])
+  qty       Int     @default(1)
+  unitPricePence Int
+  totalPence Int
+}
+
+model RentalAgreement {
+  id          String   @id @default(cuid())
+  bookingId   String   @unique
+  booking     Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  version     String
+  body        String
+  acceptedAt  DateTime @default(now())
+  acceptedBy  String?
+}
+
+model CustomerDocument {
+  id        String   @id @default(cuid())
+  bookingId String
+  booking   Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  kind      String   // driving_licence | id | insurance | other
+  fileName  String
+  fileUrl   String
+  status    String   @default("uploaded") // required|uploaded|under_review|approved|rejected|resubmission_requested
+  reviewerNote String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ReturnInspection {
+  id        String   @id @default(cuid())
+  bookingId String   @unique
+  booking   Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  mileage   Int?
+  damage    String?
+  fuelWater String?
+  depositDecision String?
+  createdAt DateTime @default(now())
+}
+
+model SeasonalRate {
+  id           String   @id @default(cuid())
+  name         String
+  startMonthDay String  // "06-15"
+  endMonthDay   String  // "09-05"
+  multiplierPct Int      @default(120) // 120 = +20%
+  active       Boolean  @default(true)
+}
+
+model DiscountRule {
+  id          String  @id @default(cuid())
+  name        String
+  minNights   Int
+  pct         Int
+  active      Boolean @default(true)
+}
+
+model Coupon {
+  id            String   @id @default(cuid())
+  code          String   @unique
+  kind          String   // percent | fixed
+  value         Int      // pct or pence
+  minTotalPence Int      @default(0)
+  maxUses       Int?
+  usedCount     Int      @default(0)
+  expiresAt     DateTime?
+  active        Boolean  @default(true)
+  caravanId     String?
+}
+
+model Voucher {
+  id             String   @id @default(cuid())
+  code           String   @unique
+  balancePence   Int
+  initialPence   Int
+  expiresAt      DateTime?
+  active         Boolean  @default(true)
+  redemptions    VoucherRedemption[]
+}
+
+model VoucherRedemption {
+  id        String   @id @default(cuid())
+  voucherId String
+  voucher   Voucher  @relation(fields: [voucherId], references: [id], onDelete: Cascade)
+  bookingId String
+  amountPence Int
+  createdAt DateTime @default(now())
+}
+
+model Payment {
+  id             String   @id @default(cuid())
+  bookingId      String
+  booking        Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  provider       String   @default("demo") // demo | stripe
+  providerRef    String?  @unique
+  amountPence    Int
+  currency       String   @default("GBP")
+  status         String   @default("pending") // pending|succeeded|failed|refunded|requires_action
+  idempotencyKey String?  @unique
+  rawPayload     String?
+  createdAt      DateTime @default(now())
+}
+
+model Refund {
+  id          String   @id @default(cuid())
+  bookingId   String
+  booking     Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  amountPence Int
+  reason      String
+  status      String   @default("recorded")
+  actor       String?
+  createdAt   DateTime @default(now())
+}
+
+model MaintenanceRecord {
+  id          String   @id @default(cuid())
+  caravanId   String
+  caravan     Caravan  @relation(fields: [caravanId], references: [id], onDelete: Cascade)
+  startDate   DateTime
+  endDate     DateTime
+  category    String
+  description String
+  priority    String   @default("normal")
+  assignee    String?
+  done        Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  bookingId String?
+  booking   Booking? @relation(fields: [bookingId], references: [id])
+  kind      String
+  to        String
+  subject   String
+  body      String
+  status    String   @default("queued")
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String?
+  actor     User?    @relation(fields: [actorId], references: [id])
+  action    String
+  resource  String
+  resourceId String?
+  detail    String?
+  createdAt DateTime @default(now())
+}
+
+model Review {
+  id          String   @id @default(cuid())
+  caravanId   String?
+  author      String
+  rating      Int
+  title       String?
+  body        String
+  verified    Boolean  @default(false)
+  bookingRef  String?
+  published   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
+
+model Destination {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  intro       String
+  duration    String
+  season      String
+  heroImage   String
+  stops       String   // JSON array
+  practical   String
+  distanceMi  Int?
+  published   Boolean  @default(true)
+}
+
+model JournalArticle {
+  id        String   @id @default(cuid())
+  title     String
+  slug      String   @unique
+  category  String
+  excerpt   String
+  body      String
+  heroImage String
+  published Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model Faq {
+  id       String  @id @default(cuid())
+  section  String
+  question String
+  answer   String
+  sort     Int     @default(0)
+}
+
+model SystemConfig {
+  key   String @id
+  value String
+}

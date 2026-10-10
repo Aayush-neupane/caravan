@@ -12,3 +12,4 @@ prompt.textClipping
 
 .DS_Store
 tsconfig.tsbuildinfo
+.env.example

@@ -380,7 +380,7 @@ function Sheep({ x, y, s = 1 }: { x: number; y: number; s?: number }) {
 
 const POLES = [-160, 160, 480, 800, 1120, 1440];
 
-export function DriveScene({ progress }: { progress?: MotionValue<number> }) {
+export function DriveScene({ progress, phrase = "Tow out at golden hour." }: { progress?: MotionValue<number>; phrase?: string }) {
   const reduce = useReducedMotion();
   const { scrollY } = useScroll();
   // Section progress when pinned inside the hero, else page scroll. All
@@ -568,7 +568,7 @@ export function DriveScene({ progress }: { progress?: MotionValue<number> }) {
         paintOrder="stroke"
         style={{ opacity: phraseOpacity }}
       >
-        TOW OUT AT GOLDEN HOUR
+        {phrase.toUpperCase()}
       </motion.text>
 
       {/* convoy: car leads right, caravan trails left */}

@@ -35,6 +35,12 @@ describe("pricing engine", () => {
     expect(q.weeklyDiscountPence).toBe(Math.round(q.nightlySubtotalPence * 0.1));
   });
 
+  it("pro-ratas weekly discount (8 nights earns 7/8 of the pct)", () => {
+    const q = priceQuote({ ...base, pickupISO: "2026-10-12", returnISO: "2026-10-20", extras: [] });
+    expect(q.nights).toBe(8);
+    expect(q.weeklyDiscountPence).toBe(Math.round((q.nightlySubtotalPence * 7 * 0.1) / 8));
+  });
+
   it("applies seasonal multiplier per night from each night's own date", () => {
     // 2026-09-04 (Fri) + 09-05 (Sat) are in high season ×1.2; 09-06+ are not.
     const q = priceQuote({ ...base, pickupISO: "2026-09-04", returnISO: "2026-09-08", extras: [] });
@@ -53,7 +59,8 @@ describe("pricing engine", () => {
 
   it("applies percent coupons with a 60% cap and fixed coupons capped at subtotal", () => {
     const capped = priceQuote({ ...base, pickupISO: "2026-10-13", returnISO: "2026-10-15", extras: [], couponKind: "percent", couponValue: 90 });
-    expect(capped.couponDiscountPence).toBe(Math.round(capped.rentalSubtotalPence * 0.6));
+    // Both coupon kinds share the pre-tax base (rental + fees + extras).
+    expect(capped.couponDiscountPence).toBe(Math.round((capped.rentalSubtotalPence + capped.feesPence + capped.extrasPence) * 0.6));
     const fixed = priceQuote({ ...base, pickupISO: "2026-10-13", returnISO: "2026-10-15", extras: [], couponKind: "fixed", couponValue: 999999 });
     expect(fixed.couponDiscountPence).toBe(fixed.rentalSubtotalPence + fixed.feesPence + fixed.extrasPence);
     expect(fixed.subtotalExTaxPence).toBe(0);
@@ -91,6 +98,14 @@ describe("availability engine", () => {
     expect(isAvailable({ start: d("2026-08-06"), end: d("2026-08-09") }, existing, 1).ok).toBe(true);
   });
 
+  it("enforces the request's own prep day (leading buffer)", () => {
+    // Request ending Aug 10 where an existing stay starts Aug 10: the
+    // request's own Aug-10 prep day collides and must be rejected.
+    const existing = [{ start: d("2026-08-10"), end: d("2026-08-15") }];
+    expect(isAvailable({ start: d("2026-08-05"), end: d("2026-08-10") }, existing, 1).ok).toBe(false);
+    expect(isAvailable({ start: d("2026-08-04"), end: d("2026-08-09") }, existing, 1).ok).toBe(true);
+  });
+
   it("validates min/max stay and notice", () => {
     expect(validateStay(d("2026-08-01"), d("2026-08-02"), { minNights: 2, maxNights: 10 })).toMatch(/Minimum/);
     expect(validateStay(d("2026-08-01"), d("2026-09-01"), { minNights: 2, maxNights: 10 })).toMatch(/Maximum/);
@@ -102,6 +117,12 @@ describe("booking state machine", () => {
     expect(canTransition("held", "awaiting_payment")).toBe(true);
     expect(canTransition("awaiting_payment", "awaiting_documents")).toBe(true);
     expect(canTransition("confirmed", "ready")).toBe(true);
+  });
+  it("recovers payment_review into document review", () => {
+    expect(canTransition("payment_review", "awaiting_documents")).toBe(true);
+  });
+  it("enforces the document gate (no direct payment → confirmed)", () => {
+    expect(canTransition("awaiting_payment", "confirmed")).toBe(false);
   });
   it("blocks illegal transitions (e.g. completed → active)", () => {
     expect(canTransition("completed", "active")).toBe(false);

@@ -18,9 +18,13 @@ export async function resolveCoupon(
   if (opts.rentalSubtotalPence < coupon.minTotalPence) {
     throw new Error(`Coupon “${clean}” needs a booking of at least ${(coupon.minTotalPence / 100).toFixed(0)} GBP before extras.`);
   }
-  // caravanId stores a slug restriction when set.
-  if (coupon.caravanId && opts.caravanSlug && coupon.caravanId !== opts.caravanSlug) {
-    throw new Error(`Coupon “${clean}” does not apply to this caravan.`);
+  // caravanId stores a slug restriction when set — enforce even if the
+  // caller omitted the slug (fail closed rather than skipping the check).
+  if (coupon.caravanId) {
+    if (!opts.caravanSlug) throw new Error(`Coupon “${clean}” is restricted to a specific caravan.`);
+    if (coupon.caravanId !== opts.caravanSlug) {
+      throw new Error(`Coupon “${clean}” does not apply to this caravan.`);
+    }
   }
   if (coupon.kind !== "percent" && coupon.kind !== "fixed") throw new Error(`Coupon “${clean}” is misconfigured.`);
   return { kind: coupon.kind, value: coupon.value, code: clean };
@@ -36,21 +40,37 @@ export type ResolvedExtra = {
 };
 
 // Resolve extra slugs to server-side prices (browser prices never trusted).
-// `per_person` catalogue units are charged once per unit of quantity.
-export async function resolveExtras(items: { slug: string; qty: number }[]): Promise<ResolvedExtra[]> {
+// DB record is authoritative for price/active/maxQty when seeded; static
+// catalogue is fallback for unseeded preview. `per_person` catalogue units
+// are charged once per unit of quantity (set qty = travellers).
+// Pass caravanId to enforce the CaravanExtra allowlist.
+export async function resolveExtras(
+  items: { slug: string; qty: number }[],
+  opts?: { caravanId?: string }
+): Promise<ResolvedExtra[]> {
   const out: ResolvedExtra[] = [];
   for (const item of items) {
     if (!item.qty || item.qty <= 0) continue;
     if (item.qty > 10) throw new Error("Maximum 10 of any extra per booking.");
     const def = EXTRAS.find((x) => x.slug === item.slug);
-    if (!def) throw new Error(`Unknown extra: ${item.slug}.`);
     const record = await prisma.extra.findUnique({ where: { slug: item.slug } }).catch(() => null);
+    if (!def && !record) throw new Error(`Unknown extra: ${item.slug}.`);
+    if (record && !record.active) throw new Error(`Extra ${item.slug} is not currently available.`);
+    const maxQty = record?.maxQty ?? 4;
+    if (item.qty > maxQty) throw new Error(`Maximum ${maxQty} × ${(record?.name ?? def!.name)} per booking.`);
+    if (opts?.caravanId && record) {
+      const allowed = await prisma.caravanExtra.findUnique({
+        where: { caravanId_extraId: { caravanId: opts.caravanId, extraId: record.id } },
+      }).catch(() => null);
+      if (!allowed) throw new Error(`Extra ${item.slug} is not available for this caravan.`);
+    }
+    const unit = record?.unit ?? def!.unit;
     out.push({
       slug: item.slug,
-      name: def.name,
-      unitPricePence: def.pricePence,
+      name: record?.name ?? def!.name,
+      unitPricePence: record?.pricePence ?? def!.pricePence,
       qty: item.qty,
-      perNight: def.unit === "per_night",
+      perNight: unit === "per_night",
       extraId: record?.id ?? null,
     });
   }

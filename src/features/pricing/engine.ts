@@ -8,13 +8,20 @@ import { dateRangeNights, nightsBetween, parseISODate } from "@/lib/format";
 //   1. Per-night rate: base, or weekend rate for Fri/Sat nights.
 //   2. Seasonal multiplier applied PER NIGHT from that night's own date,
 //      so trips crossing a season boundary price each night correctly.
-//   3. Weekly discount on the nightly subtotal (each full 7-night block).
+//      Defaults (120% 15 Jun–5 Sep, 110% 20 Dec–4 Jan) mirror the seeded
+//      SeasonalRate rows; pass overrides to keep DB/admin in sync.
+//   3. Weekly discount pro-rata: each full 7-night block earns the pct off
+//      that block's share of the nightly subtotal (not the whole stay).
 //   4. Mandatory fees (cleaning).
 //   5. Selected extras (per-rental, per-night, or per-person quantities).
-//   6. Coupon (percent capped at 60%, or fixed capped at the pre-tax subtotal).
+//   6. Coupon on the pre-tax subtotal (rental + fees + extras):
+//      percent capped at 60%, fixed capped at the pre-tax subtotal.
 //   7. VAT on rental + fees + extras after discounts.
 //   8. Deposit split (default 25% due now); refundable security deposit
 //      always shown separately and never counted as revenue.
+//      Voucher (server-resolved only, never client-supplied) reduces cash
+//      due now; balance = total − gross deposit so voucher + cash + balance
+//      always reconciles to total.
 
 export const QuoteInput = z.object({
   baseNightlyPence: z.number().int().positive(),
@@ -79,7 +86,20 @@ export function isWeekendNight(dateISO: string): boolean {
 
 // Seasonal helper: Jun 15 – Sep 05 = 120%, Dec 20 – Jan 04 = 110%, else 100%.
 // Evaluated per night so season-boundary trips price correctly.
-export function seasonalMultiplierFor(dateISO: string): number {
+// Optional `rules` lets callers inject DB SeasonalRate rows; defaults match seed.
+export function seasonalMultiplierFor(dateISO: string, rules?: { startMonthDay: string; endMonthDay: string; multiplierPct: number }[]): number {
+  if (rules && rules.length > 0) {
+    const d = parseISODate(dateISO);
+    const md = `${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
+    for (const r of rules) {
+      if (r.startMonthDay <= r.endMonthDay) {
+        if (md >= r.startMonthDay && md <= r.endMonthDay) return r.multiplierPct;
+      } else {
+        if (md >= r.startMonthDay || md <= r.endMonthDay) return r.multiplierPct;
+      }
+    }
+    return 100;
+  }
   const d = parseISODate(dateISO);
   const md = `${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
   if (md >= "06-15" && md <= "09-05") return 120;
@@ -104,9 +124,10 @@ export function priceQuote(input: z.input<typeof QuoteInput>, couponCode?: strin
   const nightlyBasePence = nightLines.reduce((a, n) => a + n.basePence, 0);
   const seasonalUpliftPence = Math.max(0, nightlySubtotalPence - nightlyBasePence);
 
-  // 3. Weekly discount on the nightly subtotal.
+  // 3. Weekly discount pro-rata on full 7-night blocks only.
   const fullWeeks = Math.floor(nights / 7);
-  const weeklyDiscountPence = fullWeeks > 0 ? Math.round((nightlySubtotalPence * parsed.weeklyDiscountPct) / 100) : 0;
+  const discountableShare = fullWeeks > 0 ? (fullWeeks * 7) / nights : 0;
+  const weeklyDiscountPence = fullWeeks > 0 ? Math.round((nightlySubtotalPence * discountableShare * parsed.weeklyDiscountPct) / 100) : 0;
 
   const rentalSubtotalPence = nightlySubtotalPence - weeklyDiscountPence;
 
@@ -119,12 +140,14 @@ export function priceQuote(input: z.input<typeof QuoteInput>, couponCode?: strin
     0
   );
 
-  // 6. Coupon (percent on rental subtotal, capped at 60%; fixed capped at pre-tax subtotal).
+  // 6. Coupon on the pre-tax subtotal (percent capped at 60%; fixed capped
+  // at the pre-tax subtotal). Both kinds share the same base.
+  const preTaxBase = rentalSubtotalPence + feesPence + extrasPence;
   let couponDiscountPence = 0;
   if (parsed.couponKind === "percent") {
-    couponDiscountPence = Math.round((rentalSubtotalPence * Math.min(parsed.couponValue, 60)) / 100);
+    couponDiscountPence = Math.round((preTaxBase * Math.min(parsed.couponValue, 60)) / 100);
   } else if (parsed.couponKind === "fixed") {
-    couponDiscountPence = Math.min(parsed.couponValue, rentalSubtotalPence + feesPence + extrasPence);
+    couponDiscountPence = Math.min(parsed.couponValue, preTaxBase);
   }
 
   // 7. Tax.

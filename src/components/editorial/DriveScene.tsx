@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import { motion, useReducedMotion, useScroll, useTransform, type MotionValue } from "framer-motion";
+import { motion, useMotionValueEvent, useReducedMotion, useScroll, useTransform, type MotionValue } from "framer-motion";
 
 const SAND = "#EDE6D6";
 const INK = "#0C1712";
@@ -12,11 +12,16 @@ const AMBER = "#C9A86A";
 
 /* ------------------------------- pieces -------------------------------- */
 
-function Wheel({ cx, spin }: { cx: number; spin?: MotionValue<number> }) {
-  const face = (
-    <g>
-      <circle cx={cx} cy={0} r={24} fill={INK} />
-      <circle cx={cx} cy={0} r={24} fill="none" stroke={SAND} strokeWidth={3} />
+function SpinningFace({ cx, spin }: { cx: number; spin: MotionValue<number> }) {
+  const gRef = useRef<SVGGElement>(null);
+  // Native SVG rotation about the hub point (cx, 0): guaranteed in-place
+  // spin. CSS transform-origin on SVG groups anchors unpredictably, which
+  // made the wheels orbit instead of rotate.
+  useMotionValueEvent(spin, "change", (v) => {
+    gRef.current?.setAttribute("transform", `rotate(${v} ${cx} 0)`);
+  });
+  return (
+    <g ref={gRef}>
       <circle cx={cx} cy={0} r={14} fill={INK} stroke={SAND} strokeWidth={2} />
       <g stroke={SAND} strokeWidth={2.6}>
         <line x1={cx - 12.5} y1={0} x2={cx + 12.5} y2={0} />
@@ -26,11 +31,29 @@ function Wheel({ cx, spin }: { cx: number; spin?: MotionValue<number> }) {
       <circle cx={cx} cy={0} r={4.5} fill={AMBER} />
     </g>
   );
-  if (!spin) return <g>{face}</g>;
+}
+
+function Wheel({ cx, spin }: { cx: number; spin?: MotionValue<number> }) {
   return (
-    <motion.g style={{ rotate: spin, transformBox: "fill-box", transformOrigin: "center" }}>
-      {face}
-    </motion.g>
+    <g>
+      <circle cx={cx} cy={0} r={24} fill={INK} />
+      <circle cx={cx} cy={0} r={24} fill="none" stroke={SAND} strokeWidth={3} />
+      {spin ? <SpinningFace cx={cx} spin={spin} /> : <SpinningFaceStatic cx={cx} />}
+    </g>
+  );
+}
+
+function SpinningFaceStatic({ cx }: { cx: number }) {
+  return (
+    <g>
+      <circle cx={cx} cy={0} r={14} fill={INK} stroke={SAND} strokeWidth={2} />
+      <g stroke={SAND} strokeWidth={2.6}>
+        <line x1={cx - 12.5} y1={0} x2={cx + 12.5} y2={0} />
+        <line x1={cx - 6.2} y1={-10.8} x2={cx + 6.2} y2={10.8} />
+        <line x1={cx - 6.2} y1={10.8} x2={cx + 6.2} y2={-10.8} />
+      </g>
+      <circle cx={cx} cy={0} r={4.5} fill={AMBER} />
+    </g>
   );
 }
 

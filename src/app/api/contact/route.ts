@@ -20,7 +20,8 @@ export async function POST(req: Request) {
     await prisma.notification.create({
       data: { kind: "contact", to: "stay@hartleyandmoor.co.uk", subject: `[${body.topic}] ${body.name}`, body: `${body.name} <${body.email}>\n\n${body.message}`, status: "logged_demo" },
     });
-    console.log(`[contact] ${body.topic} from ${body.name} <${body.email}>`);
+    // Intentionally no PII in logs (name/email stay in the DB row only).
+    console.log(`[contact] topic=${body.topic} len=${body.message.length}`);
     return NextResponse.json({ ok: true });
   } catch (e) {
     console.error("[contact]", e);

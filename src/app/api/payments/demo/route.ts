@@ -5,12 +5,17 @@ import { createPaymentIntent, confirmDemoPayment } from "@/features/payments/pro
 import { sendNotification } from "@/lib/email";
 
 // POST /api/payments/demo — create + confirm a labelled DEMO payment.
+// Disabled when live Stripe keys are configured (prevents zero-money
+// confirmations in production).
 const Body = z.object({
   bookingId: z.string().min(1),
   succeed: z.boolean().default(true),
-});
+}).strict();
 
 export async function POST(req: Request) {
+  if (process.env.STRIPE_SECRET_KEY) {
+    return NextResponse.json({ error: "Demo payments are disabled when Stripe is configured." }, { status: 403 });
+  }
   let body: z.infer<typeof Body>;
   try {
     body = Body.parse(await req.json());
@@ -31,6 +36,9 @@ export async function POST(req: Request) {
     if (!body.succeed) {
       await prisma.payment.updateMany({ where: { bookingId: booking.id, status: "pending" }, data: { status: "failed" } });
       await prisma.booking.update({ where: { id: booking.id }, data: { status: "payment_review" } });
+      await prisma.bookingStatusHistory.create({
+        data: { bookingId: booking.id, from: booking.status, to: "payment_review", actor: "system", note: "Demo payment declined (as requested)" },
+      }).catch(() => {});
       return NextResponse.json({ ok: false, demo: true, message: "Demo payment declined (as requested). Your hold is retained for 20 minutes — try again or choose another method." });
     }
     await confirmDemoPayment(intent.paymentId, true);

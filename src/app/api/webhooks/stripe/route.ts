@@ -8,7 +8,9 @@ export async function POST(req: Request) {
   const raw = await req.text();
 
   if (!process.env.STRIPE_SECRET_KEY) {
-    return NextResponse.json({ received: true, mode: "demo_no_stripe_configured" });
+    // No Stripe configured — do NOT acknowledge as healthy; surface the
+    // misconfiguration so the dashboard/ops notices instead of assuming OK.
+    return NextResponse.json({ received: false, mode: "demo_no_stripe_configured" }, { status: 503 });
   }
   if (!secret || !sig) return NextResponse.json({ error: "Missing webhook signature." }, { status: 400 });
 
@@ -21,13 +23,24 @@ export async function POST(req: Request) {
       const intent = event.data.object as { id: string; metadata?: { bookingId?: string } };
       const succeeded = event.type === "payment_intent.succeeded";
       const existing = await prisma.payment.findFirst({ where: { providerRef: intent.id } });
-      if (existing && existing.status === "succeeded") {
+      if (existing && existing.status === "succeeded" && succeeded) {
         return NextResponse.json({ received: true, deduped: true }); // idempotent retry
       }
       if (existing) {
-        await prisma.payment.update({ where: { id: existing.id }, data: { status: succeeded ? "succeeded" : "failed", rawPayload: JSON.stringify(event.type) } });
-        if (succeeded) {
-          await prisma.booking.updateMany({ where: { id: existing.bookingId, status: "awaiting_payment" }, data: { status: "awaiting_documents" } });
+        await prisma.payment.update({ where: { id: existing.id }, data: { status: succeeded ? "succeeded" : "failed", rawPayload: raw.slice(0, 8000) } });
+        const booking = await prisma.booking.findUnique({ where: { id: existing.bookingId } });
+        if (booking) {
+          if (succeeded && (booking.status === "awaiting_payment" || booking.status === "payment_review")) {
+            await prisma.booking.update({ where: { id: booking.id }, data: { status: "awaiting_documents" } });
+            await prisma.bookingStatusHistory.create({
+              data: { bookingId: booking.id, from: booking.status, to: "awaiting_documents", actor: "system", note: `Stripe ${intent.id} succeeded` },
+            }).catch(() => {});
+          } else if (!succeeded && booking.status === "awaiting_payment") {
+            await prisma.booking.update({ where: { id: booking.id }, data: { status: "payment_review" } });
+            await prisma.bookingStatusHistory.create({
+              data: { bookingId: booking.id, from: booking.status, to: "payment_review", actor: "system", note: `Stripe ${intent.id} failed` },
+            }).catch(() => {});
+          }
         }
       }
     }

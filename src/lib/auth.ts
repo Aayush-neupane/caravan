@@ -1,13 +1,16 @@
 import NextAuth, { type NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 
-// Demo auth: two seeded accounts (owner + customer) + any DB user via API.
-// Production: replace with Email/OAuth provider and proper password hashing;
-// role-based checks below remain the enforcement point.
+// Demo auth: two seeded accounts (owner + customer) for local preview.
+// Production: set AUTH_ALLOW_DEMO!=="true" (default) and these logins are
+// rejected — wire Email/OAuth + hashed DB users instead. Role checks below
+// remain the enforcement point.
+
+const DEMO_ALLOW = process.env.AUTH_ALLOW_DEMO === "true" || process.env.NODE_ENV !== "production";
 
 export const DEMO_USERS = [
-  { id: "demo-owner", email: "owner@hartleyandmoor.example", password: "owner1234", name: "M. Hartley", role: "owner" },
-  { id: "demo-customer", email: "customer@example.com", password: "customer1234", name: "Demo Traveller", role: "customer" },
+  { id: "demo-owner", email: "owner@hartleyandmoor.example", password: process.env.DEMO_OWNER_PASSWORD ?? "owner1234", name: "M. Hartley", role: "owner" },
+  { id: "demo-customer", email: "customer@example.com", password: process.env.DEMO_CUSTOMER_PASSWORD ?? "customer1234", name: "Demo Traveller", role: "customer" },
 ];
 
 export const authOptions: NextAuthOptions = {
@@ -20,6 +23,7 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
+        if (!DEMO_ALLOW) return null;
         const found = DEMO_USERS.find(
           (u) => u.email.toLowerCase() === (credentials?.email ?? "").toLowerCase() && u.password === credentials?.password
         );

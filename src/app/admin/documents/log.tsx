@@ -33,7 +33,7 @@ export function PhysicalLog() {
   if (!open) return <button type="button" onClick={() => setOpen(true)} className={`${btn} mt-3`}>+ Log physical receipt</button>;
   return (
     <div className="mt-3 grid gap-2 border border-dashed border-border p-3 sm:grid-cols-4" style={{ borderRadius: 8 }}>
-      <input aria-label="Booking reference" className="field-input !py-1.5 !text-[0.85rem] font-mono uppercase" value={f.ref} onChange={(e) => setF({ ...f, ref: e.target.value.toUpperCase() })} placeholder="HM-XXXXXX" maxLength={24} />
+      <input aria-label="Booking reference" className="field-input !py-1.5 !text-[0.85rem] font-mono uppercase" value={f.ref} onChange={(e) => setF({ ...f, ref: e.target.value.toUpperCase() })} placeholder="WW-XXXXXX…" maxLength={24} />
       <select aria-label="Document kind" className="field-input !py-1.5 !text-[0.85rem]" value={f.kind} onChange={(e) => setF({ ...f, kind: e.target.value })}>
         {KINDS.map((k) => <option key={k} value={k}>{k.replace(/_/g, " ")}</option>)}
       </select>

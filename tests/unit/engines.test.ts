@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { priceQuote } from "@/features/pricing/engine";
-import { isAvailable, validateStay } from "@/features/availability/engine";
+import { isAvailable, validateStay, blockingNow, holdIsLive, liveHoldBookingIds } from "@/features/availability/engine";
 import { canTransition } from "@/features/bookings/stateMachine";
 import { otpFor, otpSlot, verifyOtp, OTP_WINDOW_MS } from "@/features/handover/otp";
 
@@ -10,17 +10,17 @@ const base = {
   weeklyDiscountPct: 10,
   seasonalMultiplierPct: 100,
   cleaningFeePence: 7500,
-  taxPct: 20,
+  taxPct: 10,
   securityDepositPence: 50000,
   depositPct: 25,
 };
 
 describe("pricing engine", () => {
-  it("prices 3 midweek nights with cleaning + VAT", () => {
+  it("prices 3 midweek nights with cleaning + GST", () => {
     const q = priceQuote({ ...base, pickupISO: "2026-10-13", returnISO: "2026-10-16", extras: [] });
     expect(q.nights).toBe(3);
     expect(q.nightlySubtotalPence).toBe(30000);
-    expect(q.taxPence).toBe(Math.round((30000 + 7500) * 0.2));
+    expect(q.taxPence).toBe(Math.round((30000 + 7500) * 0.1));
     expect(q.totalPence).toBe(30000 + 7500 + q.taxPence);
   });
 
@@ -110,6 +110,37 @@ describe("availability engine", () => {
   it("validates min/max stay and notice", () => {
     expect(validateStay(d("2026-08-01"), d("2026-08-02"), { minNights: 2, maxNights: 10 })).toMatch(/Minimum/);
     expect(validateStay(d("2026-08-01"), d("2026-09-01"), { minNights: 2, maxNights: 10 })).toMatch(/Maximum/);
+  });
+});
+
+describe("abandoned-hold expiry (stale held bookings stop blocking)", () => {
+  const now = new Date("2026-10-10T12:00:00Z");
+  const holds = [
+    { bookingId: "b-live", expiresAt: new Date("2026-10-10T12:19:00Z") },
+    { bookingId: "b-lapsed", expiresAt: new Date("2026-10-10T11:40:00Z") },
+    { bookingId: null, expiresAt: new Date("2026-10-10T12:30:00Z") }, // no booking attached
+  ];
+  const bookings = [
+    { id: "b-live", status: "held" },
+    { id: "b-lapsed", status: "held" },
+    { id: "b-nohold", status: "held" },
+    { id: "b-confirmed", status: "confirmed" },
+  ];
+
+  it("treats only unexpired holds as live", () => {
+    expect(holdIsLive(new Date("2026-10-10T12:00:01Z"), now)).toBe(true);
+    expect(holdIsLive(new Date("2026-10-10T11:59:59Z"), now)).toBe(false);
+    expect(liveHoldBookingIds(holds, now)).toEqual(new Set(["b-live"]));
+  });
+
+  it("blocks for held-with-live-hold and every other status, never for stale held", () => {
+    const blocking = blockingNow(bookings, liveHoldBookingIds(holds, now)).map((b) => b.id);
+    expect(blocking).toEqual(["b-live", "b-confirmed"]);
+  });
+
+  it("keeps the held → expired transition legal for the sweep", () => {
+    expect(canTransition("held", "expired")).toBe(true);
+    expect(canTransition("expired", "held")).toBe(false);
   });
 });
 

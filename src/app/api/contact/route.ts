@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { prisma } from "@/lib/db";
-import { gateMutation } from "@/lib/security";
+import { cleanText, gateMutation } from "@/lib/security";
+import { logger } from "@/lib/logger";
+import { sendNotification } from "@/lib/email";
 
 const Body = z.object({
-  name: z.string().min(2).max(80),
-  email: z.string().email(),
-  topic: z.string().max(60).default("General"),
-  message: z.string().min(10).max(2000),
+  name: cleanText(2, 80),
+  email: z.string().email().max(254),
+  topic: cleanText(1, 60).default("General"),
+  message: cleanText(10, 2000),
 });
 
 export async function POST(req: Request) {
@@ -20,14 +21,21 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Please give your name, a valid email, and a message of at least 10 characters." }, { status: 400 });
   }
   try {
-    await prisma.notification.create({
-      data: { kind: "contact", to: "stay@hartleyandmoor.co.uk", subject: `[${body.topic}] ${body.name}`, body: `${body.name} <${body.email}>\n\n${body.message}`, status: "logged_demo" },
+    // Strip CRLF from header-adjacent fields to block header injection.
+    const safeTopic = body.topic.replace(/[\r\n]+/g, " ").slice(0, 60);
+    const safeName = body.name.replace(/[\r\n]+/g, " ").slice(0, 80);
+    // Logged to Notification AND emailed to the depot when Resend is set.
+    await sendNotification({
+      kind: "contact",
+      to: "hello@wattleandwander.com.au",
+      subject: `[${safeTopic}] ${safeName}`,
+      body: `${body.name} <${body.email}>\n\n${body.message}`,
     });
     // Intentionally no PII in logs (name/email stay in the DB row only).
-    console.log(`[contact] topic=${body.topic} len=${body.message.length}`);
+    logger.info("[contact] received", { topic_len: safeTopic.length, len: body.message.length });
     return NextResponse.json({ ok: true });
   } catch (e) {
-    console.error("[contact]", e);
-    return NextResponse.json({ error: "Could not send. Please email stay@hartleyandmoor.co.uk directly." }, { status: 500 });
+    logger.error("[contact] failed");
+    return NextResponse.json({ error: "Could not send. Please email hello@wattleandwander.com.au directly." }, { status: 500 });
   }
 }

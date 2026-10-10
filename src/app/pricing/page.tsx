@@ -6,7 +6,7 @@ import { getPricingRules } from "@/features/pricing/rules";
 import { getLiveCaravans } from "@/features/catalogue/live";
 import { gbp } from "@/lib/format";
 
-export const metadata: Metadata = { title: "Pricing & extras", description: "How caravan hire is priced: nightly rates, seasonal multipliers, weekly discounts, cleaning, deposits, mileage and VAT — with itemised examples from the pricing engine." };
+export const metadata: Metadata = { title: "Pricing & extras", description: "How caravan hire is priced: nightly rates, seasonal multipliers, weekly discounts, cleaning, deposits, mileage and GST — with itemised examples from the pricing engine." };
 
 function Example({ slug, pickup, ret, label, seasonal, caravans }: { slug: string; pickup: string; ret: string; label: string; seasonal: SeasonalRule[]; caravans: CatalogueCaravan[] }) {
   const c = caravans.find((x) => x.slug === slug) ?? CARAVANS.find((x) => x.slug === slug)!;
@@ -25,7 +25,7 @@ function Example({ slug, pickup, ret, label, seasonal, caravans }: { slug: strin
         {q.seasonalUpliftPence > 0 && <div className="flex justify-between"><dt className="text-muted">Seasonal uplift (per-night, by date)</dt><dd>{gbp(q.seasonalUpliftPence)}</dd></div>}
         {q.weeklyDiscountPence > 0 && <div className="flex justify-between"><dt className="text-muted">Long-stay discount</dt><dd className="text-success">−{gbp(q.weeklyDiscountPence)}</dd></div>}
         <div className="flex justify-between"><dt className="text-muted">Cleaning (mandatory)</dt><dd>{gbp(q.feesPence)}</dd></div>
-        <div className="flex justify-between"><dt className="text-muted">VAT 20%</dt><dd>{gbp(q.taxPence)}</dd></div>
+        <div className="flex justify-between"><dt className="text-muted">GST 10%</dt><dd>{gbp(q.taxPence)}</dd></div>
         <div className="flex justify-between border-t border-border pt-2 font-bold"><dt>Total</dt><dd>{gbp(q.totalPence)}</dd></div>
         <div className="flex justify-between text-[0.88rem]"><dt className="text-muted">Due today (25%)</dt><dd>{gbp(q.depositDuePence)}</dd></div>
         <div className="flex justify-between text-[0.88rem]"><dt className="text-muted">Refundable deposit (separate)</dt><dd>{gbp(q.securityDepositPence)}</dd></div>
@@ -47,7 +47,7 @@ export default async function PricingPage() {
         <h1 className="mt-3 font-display text-5xl text-charcoal">Every pound, explained.</h1>
         <p className="mt-4 max-w-2xl leading-relaxed text-muted">
           One authoritative pricing service drives this page, the fleet, and checkout. Order: nightly rates (with
-          weekend rules) → seasonal multiplier → weekly discount → mandatory fees → extras → coupons → 20% VAT →
+          weekend rules) → seasonal multiplier → weekly discount → mandatory fees → extras → coupons → 10% GST →
           deposit split. The refundable security deposit is always shown separately and never counted as revenue.
         </p>
         <div className="mt-8 grid gap-6 md:grid-cols-2">
@@ -64,8 +64,8 @@ export default async function PricingPage() {
                 <tr><td className="font-semibold">Long stays</td><td>Weekly discount off each full 7-night block ({["the-rowan", "the-alder", "the-solace"].map((s) => { const v = by(s); return `${v.name.replace("The ", "")} ${v.weeklyDiscountPct}%`; }).join(" · ")}).</td></tr>
                 <tr><td className="font-semibold">Minimums</td><td>{["the-rowan", "the-alder", "the-solace"].map((s) => { const v = by(s); return `${v.name.replace("The ", "")} ${v.minNights}`; }).join(" · ")} nights min. Max {Math.max(...caravans.map((c) => c.maxNights))} nights.</td></tr>
                 <tr><td className="font-semibold">Cleaning</td><td>{gbp(Math.min(...caravans.map((c) => c.cleaningFeePence)))}–{gbp(Math.max(...caravans.map((c) => c.cleaningFeePence)))} mandatory per hire. Leave the van tidy; deep-clean is on us.</td></tr>
-                <tr><td className="font-semibold">Mileage</td><td>100–120 miles/night included. Excess {gbp(35)}/mile. Extra 250-mile packs {gbp(5500)}.</td></tr>
-                <tr><td className="font-semibold">VAT</td><td>20% on rental + fees + extras after discounts. Shown itemised before payment.</td></tr>
+                <tr><td className="font-semibold">Mileage</td><td>100–120 km/night included. Excess {gbp(35)}/km. Extra 400 km packs {gbp(5500)}.</td></tr>
+                <tr><td className="font-semibold">GST</td><td>10% on rental + fees + extras after discounts. Shown itemised before payment.</td></tr>
               </tbody>
             </table>
           </div>
@@ -73,7 +73,7 @@ export default async function PricingPage() {
             <h2 className="font-display text-3xl">Deposits, done properly</h2>
             <div className="mt-4 space-y-4 text-[0.95rem] leading-relaxed text-charcoal/85">
               <p><strong>Booking deposit (25%):</strong> part-payment of the rental itself, settled at the depot counter along with the balance. Nothing is charged online — your reservation simply holds the dates.</p>
-              <p><strong>Refundable security deposit (£500–£750):</strong> authorised alongside the balance and released within 5 working days of return, less only documented damage, missing items or excess mileage. It is held separately in the accounts and never reported as revenue.</p>
+              <p><strong>Refundable security deposit ($800–$1,200):</strong> authorised alongside the balance and released within 5 working days of return, less only documented damage, missing items or excess mileage. It is held separately in the accounts and never reported as revenue.</p>
               <p><strong>Coupons &amp; gift vouchers:</strong> percent or fixed codes with date, caravan and minimum-spend rules — all validated server-side. Voucher balances cannot be overspent, even under concurrent redemption.</p>
             </div>
             <Link href="/booking" className="btn-primary mt-6">Check your dates</Link>

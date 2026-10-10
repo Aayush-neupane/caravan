@@ -5,6 +5,8 @@ export type DiscountRuleRow = { minNights: number; pct: number };
 
 // Live pricing rules from the database (edited in admin → Pricing).
 // Empty (unseeded DB) means the engine falls back to its documented defaults.
+// A DB error also returns empty (fail-open to defaults) but is logged so
+// ops can distinguish "unseeded" from "database down".
 export async function getPricingRules(): Promise<{
   seasonal: SeasonalRule[];
   discounts: DiscountRuleRow[];
@@ -22,7 +24,8 @@ export async function getPricingRules(): Promise<{
       })),
       discounts: d.map((r) => ({ minNights: r.minNights, pct: r.pct })),
     };
-  } catch {
+  } catch (e) {
+    console.error("[pricing-rules] DB read failed, falling back to defaults:", e);
     return { seasonal: [], discounts: [] };
   }
 }

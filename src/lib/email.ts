@@ -12,20 +12,27 @@ export async function sendNotification(opts: {
   subject: string;
   body: string;
 }): Promise<{ id: string; delivered: boolean }> {
+  // Strip CRLF to block email header injection; cap subject length.
+  const safeSubject = opts.subject.replace(/[\r\n]+/g, " ").slice(0, 200);
+  // Never persist one-time codes — store a redacted placeholder instead.
+  const safeBody =
+    opts.kind === "handover_otp" ? "Handover code sent (redacted for security)." : opts.body;
   const record = await prisma.notification.create({
     data: {
       bookingId: opts.bookingId,
       kind: opts.kind,
       to: opts.to,
-      subject: opts.subject,
-      body: opts.body,
+      subject: safeSubject,
+      body: safeBody,
       status: "queued",
     },
   });
 
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
-    console.log(`[notify:demo] ${opts.kind} → ${opts.to}: ${opts.subject}`);
+    // Redact PII: log kind + recipient domain only, never the full address.
+    const domain = opts.to.split("@")[1] ?? "invalid";
+    console.log(`[notify:demo] ${opts.kind} → @${domain}`);
     await prisma.notification.update({ where: { id: record.id }, data: { status: "logged_demo" } });
     return { id: record.id, delivered: false };
   }
@@ -34,9 +41,9 @@ export async function sendNotification(opts: {
     const { Resend } = await import("resend");
     const resend = new Resend(apiKey);
     await resend.emails.send({
-      from: process.env.EMAIL_FROM ?? "bookings@hartleyandmoor.example",
+      from: process.env.EMAIL_FROM ?? "bookings@wattleandwander.com.au",
       to: opts.to,
-      subject: opts.subject,
+      subject: safeSubject,
       text: opts.body,
     });
     await prisma.notification.update({ where: { id: record.id }, data: { status: "sent" } });
@@ -50,9 +57,9 @@ export async function sendNotification(opts: {
 
 export function bookingEmailBodies(ref: string, caravan: string, pickup: string, ret: string, total: string) {
   return {
-    confirmation: `Your Hartley & Moor collection voucher ${ref} (${caravan}, ${pickup} → ${ret}, total ${total} incl. VAT) is reserved. No payment is taken online — show this reference at Lansdown Depot, bring your driving licence and tow-car documents, and arrive 15 minutes early. Our team checks everything with you at the counter and settles payment there.`,
+    confirmation: `Your Wattle & Wander collection voucher ${ref} (${caravan}, ${pickup} → ${ret}, total ${total} incl. GST) is reserved. No payment is taken online — show this reference at Brunswick Depot, bring your driving licence and tow-vehicle documents, and arrive 15 minutes early. Our team checks everything with you at the counter and settles payment there.`,
     paymentReceipt: `Payment received for reservation ${ref}. Thank you — your receipt is attached to your account.`,
-    collectionReminder: `Reminder: collect ${caravan} for booking ${ref}. Bring your driving licence, tow-car documents, and arrive 15 minutes early for the handover.`,
-    documentRequest: `Booking ${ref}: please bring your driving licence and tow-car documents to the depot counter — our team checks them with you at handover.`,
+    collectionReminder: `Reminder: collect ${caravan} for booking ${ref}. Bring your driving licence, tow-vehicle documents, and arrive 15 minutes early for the handover.`,
+    documentRequest: `Booking ${ref}: please bring your driving licence and tow-vehicle documents to the depot counter — our team checks them with you at handover.`,
   };
 }

@@ -4,19 +4,21 @@ import { dateRangeNights, nightsBetween, parseISODate } from "@/lib/format";
 // One authoritative pricing service. Used by quote API, booking flow,
 // pricing page examples, and admin preview. Never trust browser totals.
 //
-// Calculation order (documented, UK VAT rules):
+// Calculation order (documented, AU GST rules):
 //   1. Per-night rate: base, or weekend rate for Fri/Sat nights.
 //   2. Seasonal multiplier applied PER NIGHT from that night's own date,
 //      so trips crossing a season boundary price each night correctly.
 //      Defaults (120% 15 Jun–5 Sep, 110% 20 Dec–4 Jan) mirror the seeded
 //      SeasonalRate rows; pass overrides to keep DB/admin in sync.
-//   3. Weekly discount pro-rata: each full 7-night block earns the pct off
-//      that block's share of the nightly subtotal (not the whole stay).
+//   3. Weekly discount pro-rata (approximation): each full 7-night block
+//      earns the pct off that block's share of the nightly subtotal (not the
+//      whole stay). Approximated as (fullWeeks*7/nights) of the subtotal —
+//      nightly rate variance within the stay is averaged, not itemised.
 //   4. Mandatory fees (cleaning).
 //   5. Selected extras (per-rental, per-night, or per-person quantities).
 //   6. Coupon on the pre-tax subtotal (rental + fees + extras):
 //      percent capped at 60%, fixed capped at the pre-tax subtotal.
-//   7. VAT on rental + fees + extras after discounts.
+//   7. GST on rental + fees + extras after discounts.
 //   8. Deposit split (default 25% due now); refundable security deposit
 //      always shown separately and never counted as revenue.
 //      Voucher (server-resolved only, never client-supplied) reduces cash
@@ -41,8 +43,8 @@ export const QuoteInput = z.object({
     .default([]),
   couponKind: z.enum(["percent", "fixed", "none"]).default("none"),
   couponValue: z.number().int().min(0).default(0),
-  voucherPence: z.number().int().min(0).default(0),
-  taxPct: z.number().min(0).max(40).default(20),
+  voucherPence: z.number().int().min(0).max(500000).default(0),
+  taxPct: z.number().min(0).max(40).default(10),
   securityDepositPence: z.number().int().min(0).default(0),
   depositPct: z.number().min(0).max(100).default(25),
 });
@@ -88,24 +90,26 @@ export function isWeekendNight(dateISO: string): boolean {
 // Seasonal helper: Jun 15 – Sep 05 = 120%, Dec 20 – Jan 04 = 110%, else 100%.
 // Evaluated per night so season-boundary trips price correctly.
 // Optional `rules` lets callers inject live DB SeasonalRate rows (first match
-// wins); defaults match the seed and apply when unseeded.
+// wins). `undefined` = DB unavailable → documented defaults apply;
+// `[]` = seasonality explicitly disabled (no uplift) → 100.
 export function seasonalMultiplierFor(dateISO: string, rules?: SeasonalRule[]): number {
-  if (rules && rules.length > 0) {
+  if (rules === undefined) {
     const d = parseISODate(dateISO);
     const md = `${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
-    for (const r of rules) {
-      if (r.startMonthDay <= r.endMonthDay) {
-        if (md >= r.startMonthDay && md <= r.endMonthDay) return r.multiplierPct;
-      } else {
-        if (md >= r.startMonthDay || md <= r.endMonthDay) return r.multiplierPct;
-      }
-    }
+    if (md >= "06-15" && md <= "09-05") return 120;
+    if (md >= "12-20" || md <= "01-04") return 110;
     return 100;
   }
+  if (rules.length === 0) return 100;
   const d = parseISODate(dateISO);
   const md = `${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
-  if (md >= "06-15" && md <= "09-05") return 120;
-  if (md >= "12-20" || md <= "01-04") return 110;
+  for (const r of rules) {
+    if (r.startMonthDay <= r.endMonthDay) {
+      if (md >= r.startMonthDay && md <= r.endMonthDay) return r.multiplierPct;
+    } else {
+      if (md >= r.startMonthDay || md <= r.endMonthDay) return r.multiplierPct;
+    }
+  }
   return 100;
 }
 
@@ -113,7 +117,7 @@ export function priceQuote(input: z.input<typeof QuoteInput>, couponCode?: strin
   const parsed = QuoteInput.parse(input);
   const nights = nightsBetween(parseISODate(parsed.pickupISO), parseISODate(parsed.returnISO));
   if (nights <= 0) throw new Error("Return date must be after pickup date.");
-  const live = seasonalRules && seasonalRules.length > 0 ? seasonalRules : undefined;
+  const live = seasonalRules;
 
   // 1–2. Per-night rate: weekend rule, then that night's own seasonal multiplier.
   const nightLines: NightLine[] = dateRangeNights(parsed.pickupISO, parsed.returnISO).map((date) => {

@@ -31,6 +31,29 @@ export function isAvailable(
   return { ok: true };
 }
 
+export type HoldLike = { bookingId: string | null; expiresAt: Date };
+
+// A `held` reservation only blocks inventory while its hold is live. Once
+// the hold expires the guest has walked away: the cron sweep flips the
+// booking to `expired` and the dates must free up immediately, so every
+// availability read ignores held rows without a live hold (fail-open for
+// honest inventory, fail-closed nowhere — an expired hold is not inventory).
+export function holdIsLive(expiresAt: Date, now: Date = new Date()): boolean {
+  return new Date(expiresAt).getTime() > now.getTime();
+}
+
+export function liveHoldBookingIds(holds: HoldLike[], now: Date = new Date()): Set<string> {
+  return new Set(
+    holds.filter((h) => h.bookingId && holdIsLive(h.expiresAt, now)).map((h) => h.bookingId as string)
+  );
+}
+
+// Filters blocking-status bookings down to the ones that genuinely hold
+// inventory: everything except `held`, plus `held` with a live hold.
+export function blockingNow<T extends { id: string; status: string }>(bookings: T[], liveHeldIds: Set<string>): T[] {
+  return bookings.filter((b) => b.status !== "held" || liveHeldIds.has(b.id));
+}
+
 export function validateStay(
   pickup: Date,
   ret: Date,

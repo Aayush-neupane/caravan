@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { gbp } from "@/lib/format";
 import { Compass } from "@/components/editorial/Decor";
 
@@ -33,16 +34,55 @@ function bars(seed: string, n = 44): number[] {
   return out;
 }
 
-const INK = "#1A2B23";
-const PAPER = "#F8F7F2";
-const SAND = "#EDE6D6";
-const AMBER = "#C9A86A";
-const MUTED = "#686B65";
-const DISPLAY = '"Cormorant Garamond", Georgia, serif';
-const MONO = 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
+// Palette sourced from design tokens (tokens.css / tailwind theme).
+// Read at module scope from CSS vars so canvas + DOM stay in sync.
+const css = (name: string, fallback: string) =>
+  typeof document !== "undefined" && typeof getComputedStyle !== "undefined"
+    ? getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback
+    : fallback;
+const INK_HEX = "#1A2B23";
+const PAPER_HEX = "#F8F7F2";
+const SAND_HEX = "#EDE6D6";
+const AMBER_HEX = "#C9A86A";
+const MUTED_HEX = "#686B65";
 
 // PNG export drawn straight to canvas — crisp at any size, zero assets, and
 // exactly the ticket (never the page). 1200px wide, ~2x of the on-screen card.
+// Every font stack/weight/size the ticket canvas paints with. Loading them
+// before drawing keeps the PNG identical to the on-screen card instead of
+// falling back to a substituted serif mid-download.
+const DISPLAY_SPECS = ["600 56px", "500 42px", "400 28px", "400 27px", "700 60px"];
+const MONO_SPECS = ["700 24px", "700 88px", "700 21px", "700 19px"];
+
+// Families the CSS var may hold, e.g. `'__Cormorant_Garamond_1a2b3c', 'Cormorant Garamond'`.
+// document.fonts.load only accepts one family per shorthand, so split at commas.
+function familiesFromVar(value: string, fallback: string): string[] {
+  return (value || fallback)
+    .split(",")
+    .map((f) => f.trim().replace(/^['"]|['"]$/g, ""))
+    .filter(Boolean);
+}
+
+async function ensureTicketFonts(): Promise<void> {
+  try {
+    if (typeof document !== "undefined" && document.fonts) {
+      await document.fonts.ready;
+      const displayFamilies = familiesFromVar(css("--font-display", '"Cormorant Garamond", Georgia, serif'), '"Cormorant Garamond"');
+      const monoFamilies = familiesFromVar(css("--font-mono", "ui-monospace"), "ui-monospace");
+      const loads: Promise<FontFace[]>[] = [];
+      for (const spec of DISPLAY_SPECS) {
+        for (const family of displayFamilies) loads.push(document.fonts.load(`${spec} "${family}"`));
+      }
+      for (const spec of MONO_SPECS) {
+        for (const family of monoFamilies) loads.push(document.fonts.load(`${spec} "${family}"`));
+      }
+      await Promise.all(loads.map((p) => p.catch(() => [])));
+    }
+  } catch {
+    /* canvas falls back to serif/mono — never blocks download */
+  }
+}
+
 function renderTicketPNG(t: TicketData): HTMLCanvasElement {
   const W = 1200;
   const H = 1120;
@@ -53,8 +93,16 @@ function renderTicketPNG(t: TicketData): HTMLCanvasElement {
   const ctx = canvas.getContext("2d")!;
   const stamp = t.status === "active" ? "COLLECTED" : t.status === "cancelled" ? "CANCELLED" : "RESERVED";
   const nights = nightsBetween(t.pickup, t.ret);
+  // Resolve token vars to real colours for canvas (canvas cannot paint var()).
+  const paper = css("--paper", PAPER_HEX);
+  const ink = css("--forest", INK_HEX);
+  const sand = css("--sand", SAND_HEX);
+  const amber = css("--amber", AMBER_HEX);
+  const muted = css("--muted", MUTED_HEX);
+  const displayStack = '"Cormorant Garamond", Georgia, serif';
+  const monoStack = "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
 
-  ctx.fillStyle = PAPER;
+  ctx.fillStyle = paper;
   ctx.fillRect(0, 0, W, H);
 
   const cardX = M;
@@ -70,29 +118,29 @@ function renderTicketPNG(t: TicketData): HTMLCanvasElement {
   ctx.fillStyle = "#FFFFFF";
   ctx.fill();
   ctx.lineWidth = 4;
-  ctx.strokeStyle = INK;
+  ctx.strokeStyle = ink;
   ctx.stroke();
   ctx.save();
   rr(cardX, M, cardW, H - M * 2, 24);
   ctx.clip();
 
   // Masthead
-  ctx.fillStyle = INK;
+  ctx.fillStyle = ink;
   ctx.fillRect(cardX, M, cardW, 132);
-  ctx.fillStyle = SAND;
-  ctx.font = `700 24px ${MONO}`;
+  ctx.fillStyle = sand;
+  ctx.font = `700 24px ${monoStack}`;
   ctx.textBaseline = "alphabetic";
-  ctx.fillText("HARTLEY & MOOR · COLLECTION VOUCHER", cardX + 40, M + 80);
+  ctx.fillText("WATTLE & MOOR · COLLECTION VOUCHER", cardX + 40, M + 80);
   // Stamp
   ctx.save();
   ctx.translate(cardX + cardW - 150, M + 66);
   ctx.rotate(-0.05);
-  ctx.font = `700 24px ${MONO}`;
+  ctx.font = `700 24px ${monoStack}`;
   const sw = ctx.measureText(stamp).width + 36;
-  ctx.strokeStyle = AMBER;
+  ctx.strokeStyle = amber;
   ctx.lineWidth = 3;
   ctx.strokeRect(-sw / 2, -30, sw, 56);
-  ctx.fillStyle = AMBER;
+  ctx.fillStyle = amber;
   ctx.textAlign = "center";
   ctx.fillText(stamp, 0, 8);
   ctx.restore();
@@ -101,43 +149,43 @@ function renderTicketPNG(t: TicketData): HTMLCanvasElement {
   let y = M + 132 + 72;
   const lx = cardX + 40;
   // Reference
-  ctx.fillStyle = INK;
-  ctx.font = `700 88px ${MONO}`;
+  ctx.fillStyle = ink;
+  ctx.font = `700 88px ${monoStack}`;
   ctx.fillText(t.reference, lx, y);
   y += 40;
-  ctx.fillStyle = MUTED;
-  ctx.font = `700 21px ${MONO}`;
-  ctx.fillText("SHOW THIS AT LANSDOWN DEPOT, BATH", lx, y);
+  ctx.fillStyle = muted;
+  ctx.font = `700 21px ${monoStack}`;
+  ctx.fillText("SHOW THIS AT BRUNSWICK DEPOT, MELBOURNE", lx, y);
   y += 64;
   // Caravan + route
-  ctx.fillStyle = INK;
-  ctx.font = `600 56px ${DISPLAY}`;
+  ctx.fillStyle = ink;
+  ctx.font = `600 56px ${displayStack}`;
   ctx.fillText(t.caravan, lx, y);
   y += 62;
-  ctx.font = `500 42px ${DISPLAY}`;
+  ctx.font = `500 42px ${displayStack}`;
   ctx.fillText(`${day(t.pickup)}  →  ${day(t.ret)}${nights ? `  ·  ${nights} night${nights === 1 ? "" : "s"}` : ""}`, lx, y);
   y += 40;
   if (t.guestName) {
-    ctx.fillStyle = MUTED;
-    ctx.font = `400 28px ${DISPLAY}`;
+    ctx.fillStyle = muted;
+    ctx.font = `400 28px ${displayStack}`;
     ctx.fillText(`Booked for ${t.guestName}`, lx, y);
     y += 44;
   } else {
     y += 8;
   }
   // Totals
-  ctx.fillStyle = MUTED;
-  ctx.font = `700 19px ${MONO}`;
-  ctx.fillText("TOTAL INCL. VAT", lx, y);
+  ctx.fillStyle = muted;
+  ctx.font = `700 19px ${monoStack}`;
+  ctx.fillText("TOTAL INCL. GST", lx, y);
   ctx.fillText("DEPOSIT · DUE AT DEPOT", lx + 520, y);
   y += 56;
-  ctx.fillStyle = INK;
-  ctx.font = `700 60px ${DISPLAY}`;
+  ctx.fillStyle = ink;
+  ctx.font = `700 60px ${displayStack}`;
   ctx.fillText(gbp(t.totalPence), lx, y);
   ctx.fillText(gbp(t.depositDuePence), lx + 520, y);
   y += 44;
   // Perforation
-  ctx.strokeStyle = INK;
+  ctx.strokeStyle = ink;
   ctx.lineWidth = 3;
   ctx.setLineDash([16, 12]);
   ctx.beginPath();
@@ -149,14 +197,14 @@ function renderTicketPNG(t: TicketData): HTMLCanvasElement {
   // Barcode
   let bx = lx;
   for (const w of bars(t.reference)) {
-    ctx.fillStyle = INK;
+    ctx.fillStyle = ink;
     ctx.fillRect(bx, y, w * 2.4, 84);
     bx += w * 2.4 + (w === 1 ? 4 : 3);
   }
   y += 84 + 30;
   // Checklist
   ctx.fillStyle = "#333b36";
-  ctx.font = `400 27px ${DISPLAY}`;
+  ctx.font = `400 27px ${displayStack}`;
   const lines = [
     `This reference (${t.reference}) — file, paper or phone.`,
     "Your driving licence + tow-car documents.",
@@ -170,7 +218,8 @@ function renderTicketPNG(t: TicketData): HTMLCanvasElement {
   return canvas;
 }
 
-export function downloadTicket(t: TicketData): void {
+export async function downloadTicket(t: TicketData): Promise<void> {
+  await ensureTicketFonts();
   renderTicketPNG(t).toBlob((blob) => {
     if (!blob) return;
     const url = URL.createObjectURL(blob);
@@ -199,21 +248,31 @@ function Barcode({ seed }: { seed: string }) {
 // via .ticket-print (see globals print rules) — never the whole page.
 export function VoucherTicket({ ticket }: { ticket: TicketData }) {
   const nights = nightsBetween(ticket.pickup, ticket.ret);
+  const [downloading, setDownloading] = useState(false);
+  async function handleDownload() {
+    if (downloading) return;
+    setDownloading(true);
+    try {
+      await downloadTicket(ticket);
+    } finally {
+      setDownloading(false);
+    }
+  }
   return (
-    <section className="ticket-print overflow-hidden border-2 border-forest bg-white" style={{ borderRadius: 12 }} aria-label={`Collection voucher ${ticket.reference}`}>
+    <section className="ticket-print overflow-hidden rounded-lg border-2 border-forest bg-white" aria-label={`Collection voucher ${ticket.reference}`}>
       <div className="flex items-center justify-between gap-3 bg-forest px-6 py-4 text-paper sm:px-8">
         <div className="flex items-center gap-2.5">
           <Compass size={26} className="shrink-0 text-sand" />
-          <p className="font-mono text-[0.68rem] font-bold uppercase tracking-[0.22em] text-sand">Hartley &amp; Moor · Collection voucher</p>
+          <p className="font-mono text-[0.68rem] font-bold uppercase tracking-[0.22em] text-sand">Wattle &amp; Wander · Collection voucher</p>
         </div>
-        <span className="shrink-0 -rotate-3 border-2 border-amber px-2.5 py-1 font-mono text-[0.68rem] font-bold uppercase tracking-[0.2em] text-amber" style={{ borderRadius: 4 }}>
+        <span className="shrink-0 -rotate-3 rounded border-2 border-amber px-2.5 py-1 font-mono text-[0.68rem] font-bold uppercase tracking-[0.2em] text-amber">
           {ticket.status === "active" ? "Collected" : ticket.status === "cancelled" ? "Cancelled" : "Reserved"}
         </span>
       </div>
 
       <div className="px-6 pt-5 sm:px-8">
-        <p className="font-mono text-4xl font-bold tracking-[0.08em] text-forest sm:text-5xl">{ticket.reference}</p>
-        <p className="mt-1 font-mono text-[0.68rem] font-bold uppercase tracking-[0.22em] text-muted">Show this at Lansdown Depot, Bath</p>
+        <p className="font-mono text-3xl font-bold tracking-[0.08em] text-forest break-all sm:text-5xl">{ticket.reference}</p>
+        <p className="mt-1 font-mono text-[0.68rem] font-bold uppercase tracking-[0.22em] text-muted">Show this at Brunswick Depot, Melbourne</p>
         <div className="mt-3 flex flex-wrap items-baseline gap-x-6 gap-y-1">
           <p className="font-display text-2xl text-charcoal">{ticket.caravan}</p>
           <p className="font-display text-xl text-forest">
@@ -224,9 +283,9 @@ export function VoucherTicket({ ticket }: { ticket: TicketData }) {
         {ticket.guestName && <p className="mt-1 text-[0.9rem] text-muted">Booked for {ticket.guestName}</p>}
       </div>
 
-      <dl className="mx-6 mt-4 grid grid-cols-2 border-y border-border sm:mx-8" aria-label="Voucher totals">
-        <div className="border-r border-border py-3 pr-4">
-          <dt className="text-[0.66rem] font-bold uppercase tracking-[0.18em] text-muted">Total incl. VAT</dt>
+      <dl className="mx-6 mt-4 grid grid-cols-1 border-y border-border sm:mx-8 sm:grid-cols-2" aria-label="Voucher totals">
+        <div className="border-b border-border py-3 pr-4 sm:border-b-0 sm:border-r">
+          <dt className="text-[0.66rem] font-bold uppercase tracking-[0.18em] text-muted">Total incl. GST</dt>
           <dd className="mt-0.5 font-display text-2xl font-bold text-forest">{gbp(ticket.totalPence)}</dd>
         </div>
         <div className="py-3 pl-4">
@@ -247,8 +306,8 @@ export function VoucherTicket({ ticket }: { ticket: TicketData }) {
           </ol>
         </div>
         <div className="flex gap-2 print:hidden sm:flex-col">
-          <button type="button" onClick={() => downloadTicket(ticket)} className="btn-primary !py-2 !px-4 !text-[0.83rem]">Download ticket</button>
-          <button type="button" onClick={() => window.print()} className="btn-secondary !py-2 !px-4 !text-[0.83rem]">Print</button>
+          <button type="button" onClick={() => void handleDownload()} disabled={downloading} className="btn-primary px-4 py-2 text-[0.83rem] disabled:opacity-60">{downloading ? "Preparing…" : "Download ticket"}</button>
+          <button type="button" onClick={() => window.print()} className="btn-secondary px-4 py-2 text-[0.83rem]">Print</button>
         </div>
       </div>
     </section>

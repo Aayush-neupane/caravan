@@ -19,7 +19,7 @@ export default async function PricingAdmin() {
       <p className="tick-label">Live rates · engine reads these rows</p>
       <h1 className="mt-1 font-display text-4xl">Pricing &amp; extras</h1>
       <p className="mt-2 max-w-2xl text-[0.9rem] text-muted">
-        Precedence: nightly → weekend → seasonal × → weekly discount → fees → extras → coupons → VAT.
+        Precedence: nightly → weekend → seasonal × → weekly discount → fees → extras → coupons → GST.
         Changes apply to the next quote immediately. Seasonal overlaps are rejected — one multiplier per night.
         A caravan&apos;s own weekly pct wins when set; global discount rules cover vans with 0%.
       </p>

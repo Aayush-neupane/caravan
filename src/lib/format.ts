@@ -1,11 +1,20 @@
-export const CURRENCY = "GBP";
+import { randomInt } from "crypto";
 
-export function gbp(pence: number): string {
-  return new Intl.NumberFormat("en-GB", {
+export const CURRENCY = "AUD";
+
+// Primary formatter for the Melbourne operation. `gbp` is kept as a
+// deprecated alias so older imports keep working.
+export function aud(cents: number): string {
+  return new Intl.NumberFormat("en-AU", {
     style: "currency",
-    currency: "GBP",
+    currency: "AUD",
     minimumFractionDigits: 2,
-  }).format(pence / 100);
+  }).format(cents / 100);
+}
+
+/** @deprecated Use `aud()` — same minor-unit input, AUD output. */
+export function gbp(pence: number): string {
+  return aud(pence);
 }
 
 export function nightsBetween(pickup: Date, ret: Date): number {
@@ -18,8 +27,19 @@ export function toISODate(d: Date): string {
 }
 
 export function parseISODate(s: string): Date {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) throw new Error("Invalid date");
   const [y, m, d] = s.split("-").map(Number);
-  return new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
+  if (!Number.isInteger(y) || !Number.isInteger(m) || !Number.isInteger(d)) throw new Error("Invalid date");
+  const dt = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
+  if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== m - 1 || dt.getUTCDate() !== d) {
+    throw new Error("Invalid date");
+  }
+  return dt;
+}
+
+// Strict alias — throws on any non-calendar YYYY-MM-DD (same as parseISODate).
+export function parseISODateStrict(s: string): Date {
+  return parseISODate(s);
 }
 
 export function addDays(d: Date, n: number): Date {
@@ -41,7 +61,7 @@ export function dateRangeNights(pickupISO: string, returnISO: string): string[] 
 
 export function makeReference(): string {
   const chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
-  let s = "HM-";
-  for (let i = 0; i < 6; i++) s += chars[Math.floor(Math.random() * chars.length)];
+  let s = "WW-";
+  for (let i = 0; i < 6; i++) s += chars[randomInt(0, chars.length)];
   return s;
 }

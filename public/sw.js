@@ -1,9 +1,11 @@
-// Hartley & Moor offline fallback. Same-origin GETs (documents, chunks,
+// Wattle & Wander offline fallback. Same-origin GETs (documents, chunks,
 // styles, images) are cached as browsed; navigations try the network first
-// and fall back to the cached /offline page (bare dusk drive) instead of the
-// browser's default offline game. API/XHR traffic is network-only.
+// and fall back to the cached /offline page instead of the browser's
+// default offline game. API/XHR traffic is network-only and never cached.
+// Registered in production builds only (see SwRegister) — dev chunk URLs
+// change on every recompile and must never be cached.
 // Bump CACHE to ship a fresh worker + fallback.
-const CACHE = "hm-offline-v3";
+const CACHE = "ww-offline-v4";
 const FALLBACKS = ["/offline", "/"]; // each cached independently; one may fail while the other lands
 
 self.addEventListener("install", (event) => {
@@ -29,6 +31,9 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   if (request.method !== "GET") return;
+  // Never touch the API: /api/calendar, quotes and RSC payloads must stay
+  // live — a cached availability answer would let two guests book one van.
+  if (new URL(request.url).pathname.startsWith("/api/")) return;
   const isDocument = request.mode === "navigate" || request.destination === "document";
   event.respondWith(
     fetch(request)

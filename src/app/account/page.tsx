@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { AccountView } from "./view";
 
-export const metadata: Metadata = { title: "Find your reservation", description: "Look up your Hartley & Moor collection voucher by email and booking reference. No account needed.", robots: { index: false, follow: false } };
+export const metadata: Metadata = { title: "Find your reservation", description: "Look up your Wattle & Wander collection voucher by email and booking reference. No account needed.", robots: { index: false, follow: false } };
 
 export default function AccountPage({ searchParams }: { searchParams: { email?: string; reference?: string } }) {
   return (

@@ -50,7 +50,7 @@ export function CouponCreate() {
         <option value="fixed">fixed (pence)</option>
       </select>
       <input aria-label="Value" className={`${input} font-mono`} value={f.value} onChange={set("value")} inputMode="numeric" placeholder={f.kind === "percent" ? "10" : "5000"} />
-      <input aria-label="Min total £" className={`${input} font-mono`} value={f.minTotal} onChange={set("minTotal")} inputMode="decimal" placeholder="Min £" />
+      <input aria-label="Min total $" className={`${input} font-mono`} value={f.minTotal} onChange={set("minTotal")} inputMode="decimal" placeholder="Min $" />
       <input aria-label="Max uses (blank = unlimited)" className={`${input} font-mono`} value={f.maxUses} onChange={set("maxUses")} inputMode="numeric" placeholder="Max uses" />
       <input aria-label="Expiry date" className={`${input} font-mono`} type="date" value={f.expires} onChange={set("expires")} />
       <input aria-label="Restricted caravan slug (blank = all)" className={`${input} font-mono`} value={f.caravan} onChange={set("caravan")} placeholder="Caravan slug or blank" maxLength={80} />
@@ -103,12 +103,12 @@ export function CouponRow({ row }: { row: CouponRow }) {
     } catch (e) { setMsg(e instanceof Error ? e.message : "Delete failed"); } finally { setBusy(false); }
   }
 
-  const val = row.kind === "percent" ? `${row.value}%` : `£${(row.value / 100).toFixed(0)}`;
+  const val = row.kind === "percent" ? `${row.value}%` : `$${(row.value / 100).toFixed(0)}`;
   if (!edit) {
     return (
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-border py-2.5">
         <span className="min-w-24 font-mono font-bold">{row.code}</span>
-        <span className="text-[0.82rem] text-muted">{row.kind} {val} · min £{(row.minTotal / 100).toFixed(0)} · {row.used}{row.maxUses != null ? `/${row.maxUses}` : ""} used{row.expires ? ` · ends ${row.expires}` : ""}{row.caravan ? ` · ${row.caravan}` : ""}</span>
+        <span className="text-[0.82rem] text-muted">{row.kind} {val} · min ${(row.minTotal / 100).toFixed(0)} · {row.used}{row.maxUses != null ? `/${row.maxUses}` : ""} used{row.expires ? ` · ends ${row.expires}` : ""}{row.caravan ? ` · ${row.caravan}` : ""}</span>
         <span className={`font-mono text-[0.75rem] font-bold uppercase ${row.active ? "text-success" : "text-muted"}`}>{row.active ? "live" : "off"}</span>
         <span className="ml-auto flex gap-2">
           <button type="button" disabled={busy} onClick={() => setEdit(true)} className={btn}>Edit</button>
@@ -123,7 +123,7 @@ export function CouponRow({ row }: { row: CouponRow }) {
     <div className="border-b border-border py-2.5">
       <div className="grid gap-2 sm:grid-cols-6">
         <input aria-label="Value" className={`${input} font-mono`} value={f.value} onChange={set("value")} inputMode="numeric" />
-        <input aria-label="Min total £" className={`${input} font-mono`} value={f.minTotal} onChange={set("minTotal")} inputMode="decimal" />
+        <input aria-label="Min total $" className={`${input} font-mono`} value={f.minTotal} onChange={set("minTotal")} inputMode="decimal" />
         <input aria-label="Max uses" className={`${input} font-mono`} value={f.maxUses} onChange={set("maxUses")} inputMode="numeric" placeholder="∞" />
         <input aria-label="Expiry" className={`${input} font-mono`} type="date" value={f.expires} onChange={set("expires")} />
         <input aria-label="Caravan slug" className={`${input} font-mono`} value={f.caravan} onChange={set("caravan")} placeholder="slug or blank" />
@@ -151,7 +151,7 @@ export function VoucherRow({ row }: { row: VoucherRow }) {
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-border py-2.5">
       <span className="min-w-24 font-mono font-bold">{row.code}</span>
-      <span className="text-[0.82rem] text-muted">£{(row.balance / 100).toFixed(2)} remaining</span>
+      <span className="text-[0.82rem] text-muted">${(row.balance / 100).toFixed(2)} remaining</span>
       <span className={`font-mono text-[0.75rem] font-bold uppercase ${row.active ? "text-success" : "text-muted"}`}>{row.active ? "live" : "off"}</span>
       <span className="ml-auto"><button type="button" disabled={busy} onClick={flip} className={btn}>{row.active ? "Disable" : "Enable"}</button></span>
       {msg && <span role="alert" className="w-full text-[0.8rem] text-error">{msg}</span>}

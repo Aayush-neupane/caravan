@@ -33,6 +33,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   try {
     const booking = await prisma.booking.findUnique({ where: { id: params.id } });
     if (!booking) return NextResponse.json({ error: "Not found." }, { status: 404 });
+    const actorId = (session.user as { id?: string })?.id ?? undefined;
 
     if (action === "refund_deposit") {
       // Single release, only after the hire completes, owner/admin only.
@@ -42,23 +43,29 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       if (booking.status !== "completed") {
         return NextResponse.json({ error: `Deposit can only be released from completed hires (booking is ${booking.status}).` }, { status: 422 });
       }
-      const prior = await prisma.refund.findFirst({ where: { bookingId: booking.id } });
-      if (prior) return NextResponse.json({ ok: true, deduped: true, refundId: prior.id });
-      await prisma.refund.create({ data: { bookingId: booking.id, amountPence: booking.securityDepositPence, reason: "Security deposit released after inspection", actor: session.user?.email ?? role, status: "recorded" } });
-      await prisma.auditLog.create({ data: { action: "refund_deposit", resource: "booking", resourceId: booking.id, detail: `Deposit ${booking.securityDepositPence}p released by ${session.user?.email ?? role}` } });
-      return NextResponse.json({ ok: true });
+      try {
+        const result = await prisma.$transaction(async (tx) => {
+          const prior = await tx.refund.findFirst({ where: { bookingId: booking.id } });
+          if (prior) return { deduped: true, id: prior.id } as const;
+          const created = await tx.refund.create({ data: { bookingId: booking.id, amountPence: booking.securityDepositPence, reason: "Security deposit released after inspection", actor: session.user?.email ?? role, status: "recorded" } });
+          await tx.auditLog.create({ data: { action: "refund_deposit", resource: "booking", resourceId: booking.id, detail: `Deposit ${booking.securityDepositPence}p released by ${session.user?.email ?? role}`, actorId } });
+          return { id: created.id } as const;
+        });
+        if ("deduped" in result) return NextResponse.json({ ok: true, deduped: true, refundId: result.id });
+        return NextResponse.json({ ok: true });
+      } catch (e) {
+        if ((e as { code?: string })?.code === "P2002") {
+          const prior = await prisma.refund.findFirst({ where: { bookingId: booking.id } });
+          if (prior) return NextResponse.json({ ok: true, deduped: true, refundId: prior.id });
+        }
+        throw e;
+      }
     }
 
-    // Depot handover gate: a held reservation becomes active only after at
-    // least one physically-received document is logged against it. No
-    // paperwork on record, no keys.
-    if (action === "active" && booking.status === "held") {
-      const logged = await prisma.customerDocument.count({
-        where: { bookingId: booking.id, status: "approved" },
-      });
-      if (logged === 0) {
-        return NextResponse.json({ error: "Log the received documents first (Documents → log physical receipt)." }, { status: 422 });
-      }
+    // Depot handover gate: held → active is OTP-only. Generic PATCH (even
+    // with logged documents) must not hand off keys.
+    if (booking.status === "held" && action === "active") {
+      return NextResponse.json({ error: "Use OTP-verified handover (POST .../otp) for held → active." }, { status: 422 });
     }
 
     const from = booking.status as never;
@@ -77,7 +84,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       assertTransition(fresh.status as never, to);
       await tx.booking.update({ where: { id: booking.id }, data: { status: action, ...(action === "cancelled" ? { cancelledAt: new Date(), cancelReason: reason ? `Declined/cancelled by ${session.user?.email ?? role}: ${reason}` : `Cancelled by ${role} (${session.user?.email ?? "staff"})` } : {}) } });
       await tx.bookingStatusHistory.create({ data: { bookingId: booking.id, from: fresh.status, to: action, actor: session.user?.email ?? role ?? "system", note: reason ? `Admin action by ${session.user?.email ?? role}: ${reason}` : `Admin action by ${session.user?.email ?? role}` } });
-      await tx.auditLog.create({ data: { action: `booking:${action}`, resource: "booking", resourceId: booking.id, detail: `${fresh.status} → ${action} by ${session.user?.email ?? role}` } });
+      await tx.auditLog.create({ data: { action: `booking:${action}`, resource: "booking", resourceId: booking.id, detail: `${fresh.status} → ${action} by ${session.user?.email ?? role}`, actorId } });
     });
     return NextResponse.json({ ok: true });
   } catch (e) {

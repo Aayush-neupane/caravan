@@ -3,16 +3,29 @@ import { createHmac, timingSafeEqual } from "crypto";
 // Handover OTP: proves the guest is at the counter (controls their inbox)
 // before staff activate the hire. Stateless TOTP-style design — no database
 // migration: the code is HMAC(server secret, booking + 10-minute window), so
-// verification recomputes instead of storing secrets. Codes live 10 minutes
-// (±1 window tolerance); brute force is capped by per-booking attempt budgets
-// in the route handler.
+// verification recomputes instead of storing secrets. Codes are valid up to
+// 20 minutes (current + previous 10-min window tolerance); brute force is
+// capped by per-booking attempt budgets in the route handler.
 
 export const OTP_WINDOW_MS = 10 * 60 * 1000;
 export const OTP_SEND_MAX = 3; // sends per window per booking (anti-spam)
 export const OTP_TRY_MAX = 5; // guesses per window per booking
 
 function secret(): string {
-  return process.env.HANDOVER_OTP_SECRET ?? process.env.NEXTAUTH_SECRET ?? "dev-otp-secret";
+  const s =
+    process.env.HANDOVER_OTP_SECRET ??
+    (process.env.NODE_ENV === "production" ? undefined : process.env.NEXTAUTH_SECRET) ??
+    (process.env.NODE_ENV === "production" ? undefined : "dev-otp-secret-change-me-32chars!!");
+  if (!s) {
+    throw new Error("HANDOVER_OTP_SECRET must be set in production.");
+  }
+  if (s.length < 32) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("HANDOVER_OTP_SECRET must be at least 32 chars in production.");
+    }
+    console.warn("[otp] HANDOVER_OTP_SECRET is short — use ≥32 chars in production.");
+  }
+  return s;
 }
 
 export function otpSlot(now = Date.now()): number {

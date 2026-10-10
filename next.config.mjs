@@ -1,6 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  poweredByHeader: false,
+  output: "standalone",
+  compress: true,
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "images.unsplash.com" },
@@ -9,6 +12,9 @@ const nextConfig = {
     formats: ["image/avif", "image/webp"],
   },
   headers: async () => {
+    // NOTE: no custom Content-Security-Policy here — Next.js inline scripts
+    // require 'unsafe-inline' and a naive CSP would break the app. Frame
+    // embedding is already denied via X-Frame-Options: DENY above.
     const headers = [
       { key: "X-Content-Type-Options", value: "nosniff" },
       { key: "X-Frame-Options", value: "DENY" },

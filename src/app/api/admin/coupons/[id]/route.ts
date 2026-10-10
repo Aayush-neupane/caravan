@@ -42,7 +42,8 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     return NextResponse.json({ error: `Already used ${row.usedCount}× — max cannot go below that.` }, { status: 422 });
   }
   if (body.caravanSlug) {
-    const slug = body.caravanSlug.trim();
+    // Normalise to the same lowercase/trimmed form checkout compares against.
+    const slug = body.caravanSlug.trim().toLowerCase();
     if (!slug) return NextResponse.json({ error: "Caravan slug cannot be blank — send null to clear." }, { status: 422 });
     const van = await prisma.caravan.findUnique({ where: { slug } });
     if (!van) return NextResponse.json({ error: "Restricted caravan slug not found." }, { status: 422 });
@@ -58,7 +59,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       ...(body.minTotalPence != null ? { minTotalPence: body.minTotalPence } : {}),
       ...(body.maxUses !== undefined ? { maxUses: body.maxUses } : {}),
       ...(body.expiresAt !== undefined ? { expiresAt: body.expiresAt ? new Date(`${body.expiresAt}T23:59:59Z`) : null } : {}),
-      ...(body.caravanSlug !== undefined ? { caravanId: body.caravanSlug ? body.caravanSlug.trim() : null } : {}),
+      ...(body.caravanSlug !== undefined ? { caravanId: body.caravanSlug ? body.caravanSlug.trim().toLowerCase() : null } : {}),
       ...(body.active != null ? { active: body.active } : {}),
     },
   });

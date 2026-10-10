@@ -39,6 +39,12 @@ export function assertSameOrigin(req: Request): boolean {
   if (origin) return of(origin) === host;
   const referer = req.headers.get("referer");
   if (referer) return of(referer) === host;
+  // Fail closed in production for browser-like requests that omit both
+  // headers (some same-origin navigations do, but cookie/fetch-hinted POSTs
+  // should carry one). Non-browser clients (curl, Stripe webhooks — no
+  // cookie or sec-fetch-* hints) stay unaffected.
+  const hasBrowserHints = req.headers.has("cookie") || req.headers.has("sec-fetch-site") || req.headers.has("sec-fetch-mode");
+  if (!origin && !referer) return process.env.NODE_ENV === "production" ? !hasBrowserHints : true;
   return true;
 }
 

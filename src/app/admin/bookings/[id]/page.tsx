@@ -22,7 +22,7 @@ export default async function BookingDetail({ params }: { params: { id: string }
     ["Discounts", `−${gbp(b.discountPence)}`],
     ["Fees (cleaning)", gbp(b.feesPence)],
     ["Extras", gbp(b.extrasPence)],
-    ["VAT", gbp(b.taxPence)],
+    ["GST", gbp(b.taxPence)],
     ["Total", gbp(b.totalPence)],
     ["Deposit due", gbp(b.depositDuePence)],
     ["Security deposit (refundable)", gbp(b.securityDepositPence)],

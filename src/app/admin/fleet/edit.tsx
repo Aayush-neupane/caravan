@@ -78,13 +78,13 @@ export function FleetEdit({ row }: { row: FleetRow }) {
       <label className="sm:col-span-4">Description<textarea aria-label="Description" className={input} value={f.description} onChange={set("description")} rows={3} maxLength={2000} /></label>
       <label>Berths<input aria-label="Berths" className={input} value={f.berths} onChange={set("berths")} inputMode="numeric" /></label>
       <label>Max travellers<input aria-label="Max travellers" className={input} value={f.maxTravellers} onChange={set("maxTravellers")} inputMode="numeric" /></label>
-      <label>Nightly £<input aria-label="Nightly rate in pounds" className={`${input} font-mono`} value={f.base} onChange={set("base")} inputMode="decimal" /></label>
-      <label>Weekend £ (blank = base)<input aria-label="Weekend rate in pounds" className={`${input} font-mono`} value={f.weekend} onChange={set("weekend")} inputMode="decimal" placeholder="—" /></label>
+      <label>Nightly $<input aria-label="Nightly rate in dollars" className={`${input} font-mono`} value={f.base} onChange={set("base")} inputMode="decimal" /></label>
+      <label>Weekend $ (blank = base)<input aria-label="Weekend rate in dollars" className={`${input} font-mono`} value={f.weekend} onChange={set("weekend")} inputMode="decimal" placeholder="—" /></label>
       <label>Weekly %<input aria-label="Weekly discount percent" className={input} value={f.weeklyPct} onChange={set("weeklyPct")} inputMode="numeric" /></label>
       <label>Min nights<input aria-label="Min nights" className={input} value={f.minNights} onChange={set("minNights")} inputMode="numeric" /></label>
       <label>Max nights<input aria-label="Max nights" className={input} value={f.maxNights} onChange={set("maxNights")} inputMode="numeric" /></label>
-      <label>Cleaning £<input aria-label="Cleaning fee in pounds" className={`${input} font-mono`} value={f.cleaning} onChange={set("cleaning")} inputMode="decimal" /></label>
-      <label>Deposit £<input aria-label="Security deposit in pounds" className={`${input} font-mono`} value={f.deposit} onChange={set("deposit")} inputMode="decimal" /></label>
+      <label>Cleaning $<input aria-label="Cleaning fee in dollars" className={`${input} font-mono`} value={f.cleaning} onChange={set("cleaning")} inputMode="decimal" /></label>
+      <label>Deposit $<input aria-label="Security deposit in dollars" className={`${input} font-mono`} value={f.deposit} onChange={set("deposit")} inputMode="decimal" /></label>
       <label className="sm:col-span-3">Tow requirement<input aria-label="Tow requirement" className={input} value={f.towRequirement} onChange={set("towRequirement")} maxLength={500} /></label>
       <label className="flex items-center gap-2 text-[0.85rem]">Archived (hide everywhere)<input type="checkbox" checked={f.archived} onChange={set("archived")} className="h-4 w-4 accent-[#1A2B23]" /></label>
       <div className="flex gap-2 sm:col-span-4">

@@ -1,25 +1,35 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, useMotionValue, useMotionValueEvent, useReducedMotion, useScroll, useTransform, type MotionValue } from "framer-motion";
 
-const SAND = "#EDE6D6";
+// Palette from design tokens (tokens.css) with hex fallbacks for SVG paint.
+const SAND = "var(--sand,#EDE6D6)";
 const INK = "#0C1712";
-const FOREST = "#1A2B23";
-const DEEP = "#122019";
+const FOREST = "var(--forest,#1A2B23)";
+const DEEP = "var(--forest-deep,#122019)";
+const DUSK = "#212B22";
+const GRASS = "#0A1410";
 const PINEC = "#0E1A13";
-const AMBER = "#C9A86A";
+const AMBER = "var(--amber,#C9A86A)";
+const PAPER = "var(--paper,#F8F7F2)";
 
 /* ------------------------------- pieces -------------------------------- */
 
-function SpinningFace({ cx, spin }: { cx: number; spin: MotionValue<number> }) {
+// One wheel face, two modes: `spin` (a MotionValue) rotates it in place,
+// otherwise it stays static — no duplicated markup for the two states.
+function WheelFace({ cx, spin }: { cx: number; spin?: MotionValue<number> }) {
   const gRef = useRef<SVGGElement>(null);
   // Native SVG rotation about the hub point (cx, 0): guaranteed in-place
   // spin. CSS transform-origin on SVG groups anchors unpredictably, which
-  // made the wheels orbit instead of rotate.
-  useMotionValueEvent(spin, "change", (v) => {
-    gRef.current?.setAttribute("transform", `rotate(${v} ${cx} 0)`);
-  });
+  // made the wheels orbit instead of rotate. Without a `spin` value the
+  // subscription is skipped entirely — static wheels cost nothing.
+  useEffect(() => {
+    if (!spin) return;
+    return spin.on("change", (v) => {
+      gRef.current?.setAttribute("transform", `rotate(${v} ${cx} 0)`);
+    });
+  }, [spin, cx]);
   return (
     <g ref={gRef}>
       <circle cx={cx} cy={0} r={14} fill={INK} stroke={SAND} strokeWidth={2} />
@@ -38,21 +48,7 @@ function Wheel({ cx, spin }: { cx: number; spin?: MotionValue<number> }) {
     <g>
       <circle cx={cx} cy={0} r={24} fill={INK} />
       <circle cx={cx} cy={0} r={24} fill="none" stroke={SAND} strokeWidth={3} />
-      {spin ? <SpinningFace cx={cx} spin={spin} /> : <SpinningFaceStatic cx={cx} />}
-    </g>
-  );
-}
-
-function SpinningFaceStatic({ cx }: { cx: number }) {
-  return (
-    <g>
-      <circle cx={cx} cy={0} r={14} fill={INK} stroke={SAND} strokeWidth={2} />
-      <g stroke={SAND} strokeWidth={2.6}>
-        <line x1={cx - 12.5} y1={0} x2={cx + 12.5} y2={0} />
-        <line x1={cx - 6.2} y1={-10.8} x2={cx + 6.2} y2={10.8} />
-        <line x1={cx - 6.2} y1={10.8} x2={cx + 6.2} y2={-10.8} />
-      </g>
-      <circle cx={cx} cy={0} r={4.5} fill={AMBER} />
+      <WheelFace cx={cx} spin={spin} />
     </g>
   );
 }
@@ -182,7 +178,7 @@ function Pine({ x, y, s, tone }: { x: number; y: number; s: number; tone: string
 // Village church on its hill — rubble-stone nave with traceried windows,
 // gabled porch, staged west tower with pinnacled parapet, ribbed spire with
 // lucarnes, churchyard yews, gravestones and a dry-stone wall. Unmistakably
-// Cotswold; reads as a landmark, never a lighthouse.
+// Otways; reads as a landmark, never a lighthouse.
 function Yew({ x, y, s = 1 }: { x: number; y: number; s?: number }) {
   return (
     <g transform={`translate(${x},${y}) scale(${s})`}>
@@ -284,7 +280,7 @@ function Tower() {
       <line x1={24} y1={-72} x2={48} y2={-72} stroke={FOREST} strokeWidth={2} />
       <rect x={22} y={-56} width={28} height={4} fill={SAND} stroke={FOREST} strokeWidth={1} />
       {/* clock with quarter ticks */}
-      <circle cx={36} cy={-118} r={12} fill="#F8F7F2" />
+      <circle cx={36} cy={-118} r={12} fill={PAPER} />
       <line x1={36} y1={-128} x2={36} y2={-124} stroke={FOREST} strokeWidth={2} />
       <line x1={36} y1={-112} x2={36} y2={-108} stroke={FOREST} strokeWidth={2} />
       <line x1={26} y1={-118} x2={30} y2={-118} stroke={FOREST} strokeWidth={2} />
@@ -382,6 +378,16 @@ const POLES = [-160, 160, 480, 800, 1120, 1440];
 
 export function DriveScene({ progress, phrase = "Tow out at golden hour." }: { progress?: MotionValue<number>; phrase?: string }) {
   const reduce = useReducedMotion();
+  const [isSmall, setIsSmall] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 639px)");
+    const sync = () => setIsSmall(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+  // Small screens skip wheel-spin/bob: parallax layers still move, wheels stay static.
+  const still = reduce || isSmall;
   const { scrollY } = useScroll();
   // Section progress when pinned inside the hero, else page scroll. All
   // motion below derives from this single value.
@@ -453,7 +459,7 @@ export function DriveScene({ progress, phrase = "Tow out at golden hour." }: { p
         <circle key={i} cx={x} cy={y} r={1.7} fill={SAND} opacity={0.45} />
       ))}
       {/* dusk band lifting the horizon */}
-      <rect x={0} y={330} width={1440} height={142} fill="#212B22" />
+      <rect x={0} y={330} width={1440} height={142} fill={DUSK} />
       {/* sun, low beside the church tower — the outfit tows toward it.
           Large flat amber disc with halo rings + rays for dusk legibility. */}
       <circle cx={960} cy={165} r={104} fill="none" stroke={AMBER} strokeOpacity={0.18} strokeWidth={1.5} />
@@ -562,7 +568,7 @@ export function DriveScene({ progress, phrase = "Tow out at golden hour." }: { p
         fontFamily="'Cormorant Garamond', Georgia, serif"
         fontWeight={500}
         letterSpacing={5}
-        fill="#FFFFFF"
+        fill={PAPER}
         stroke="#0C1712"
         strokeWidth={0.6}
         paintOrder="stroke"
@@ -573,12 +579,12 @@ export function DriveScene({ progress, phrase = "Tow out at golden hour." }: { p
 
       {/* convoy: car leads right, caravan trails left */}
       <motion.g style={{ x: convoyX, y: 545 }}>
-        {reduce ? <Convoy /> : <Convoy spin={spin} bob={bob} />}
+        {still ? <Convoy /> : <Convoy spin={spin} bob={bob} />}
       </motion.g>
 
       {/* foreground grass */}
       <motion.g style={reduce ? undefined : { x: fast }}>
-        <rect x={-480} y={600} width={2400} height={40} fill="#0A1410" />
+        <rect x={-480} y={600} width={2400} height={40} fill={GRASS} />
         <g stroke={SAND} strokeOpacity={0.3} strokeWidth={2.5} strokeLinecap="round">
           {[-400, -260, -120, 20, 160, 300, 440, 580, 720, 860, 1000, 1140, 1280, 1420, 1560, 1700].map((x) => (
             <path key={x} d={`M${x},628 l0,-14 M${x + 12},628 l-5,-11`} />

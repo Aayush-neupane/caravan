@@ -35,7 +35,7 @@ const TRANSITIONS: Record<BookingStatus, BookingStatus[]> = {
   cancelled: [],
   expired: [],
   // Successful retry from review lands back in document review.
-  payment_review: ["awaiting_payment", "awaiting_documents", "confirmed", "cancelled"],
+  payment_review: ["awaiting_payment", "awaiting_documents", "cancelled"],
 };
 
 export function canTransition(from: BookingStatus, to: BookingStatus): boolean {
@@ -57,4 +57,5 @@ export const BLOCKING_STATUSES: BookingStatus[] = [
   "ready",
   "active",
   "payment_review",
+  "cancel_requested",
 ];

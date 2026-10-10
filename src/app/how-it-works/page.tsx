@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-export const metadata: Metadata = { title: "How it works", description: "Choosing, reserving, collecting, travelling and returning a Hartley & Moor caravan — documents, payments and deposit release explained." };
+export const metadata: Metadata = { title: "How it works", description: "Choosing, reserving, collecting, travelling and returning a Wattle & Wander caravan — documents, payments and deposit release explained." };
 
 const STEPS = [
   ["1 · Choose caravan & dates", "Filter the fleet by berths, weights and facilities. Availability is calculated server-side from real bookings, holds and maintenance — never from the browser. If dates are unavailable we explain why and suggest alternatives."],
   ["2 · Extras, eligibility & insurance", "Add bedding, awning, mileage packs. Tell us about your licence and tow car. Cover inclusions and excesses are shown in plain English with links to the actual policy — selecting an extra never implies eligibility."],
   ["3 · Reserve & voucher", "Guest checkout; no account needed. Your dates are held (20-minute reservation window, enforced server-side) and a collection voucher is issued. Nothing is charged online — a success-looking page alone proves nothing; the voucher reference does."],
   ["4 · Prepare", "Collection pack by email: route notes, packing list, arrival time. Bring your driving licence and tow-car documents to the counter — staff check physical originals with you, and rejections always carry a reason."],
-  ["5 · Collect", "40 minutes at Lansdown: voucher checked, documents verified, payment settled, weights, hitch, electrics, accompanied drive. You sign a versioned rental agreement populated from your booking snapshot. Leave when ready."],
+  ["5 · Collect", "40 minutes at Brunswick: voucher checked, documents verified, payment settled, weights, hitch, electrics, accompanied drive. You sign a versioned rental agreement populated from your booking snapshot. Leave when ready."],
   ["6 · Travel", "Gas full, breakdown cover active, a human on the phone. Keep to two-hour towing days; nightly checks take five minutes. Report issues early — most are solvable by phone."],
   ["7 · Return", "Joint 30-minute inspection: mileage, condition, gas and water recorded together and signed by both sides. No silent damage claims later."],
   ["8 · Deposit & follow-up", "Refundable deposit released within 5 working days less documented deductions. Receipt, invoice and a review invitation follow. Cancellation refunds follow the published policy version recorded on your booking."],

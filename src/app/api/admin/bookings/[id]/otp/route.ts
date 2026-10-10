@@ -38,6 +38,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     return NextResponse.json({ error: `Handover codes are for held reservations (this is ${booking.status}).` }, { status: 422 });
   }
   const actor = session.user?.email ?? role ?? "staff";
+  const actorId = (session.user as { id?: string })?.id ?? undefined;
 
   if (body.step === "send") {
     const budget = rateLimit(`handover:send:${booking.id}`, OTP_SEND_MAX, OTP_WINDOW_MS);
@@ -54,11 +55,12 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       body: `Show this code to our team at the depot counter to collect ${booking.reference}: ${code}. It expires in 10 minutes. Never share it by phone — only read it to our staff in person.`,
     }).catch(() => {});
     await prisma.auditLog.create({
-      data: { action: "handover:otp_sent", resource: "booking", resourceId: booking.id, detail: `Code emailed to guest inbox by ${actor}` },
+      data: { action: "handover:otp_sent", resource: "booking", resourceId: booking.id, detail: `Code emailed to guest inbox by ${actor}`, actorId },
     });
     // Demo/log mail mode has no inbox to check: surface the code to staff so
-    // the flow stays testable. Never returned when Resend is configured.
-    const demo = !process.env.RESEND_API_KEY;
+    // the flow stays testable. Fail closed in production — never return the
+    // code when Resend is configured OR when running in production.
+    const demo = !process.env.RESEND_API_KEY && process.env.NODE_ENV !== "production";
     return NextResponse.json({ ok: true, ...(demo ? { demoCode: code, demo: true } : {}) });
   }
 
@@ -68,7 +70,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   }
   if (!verifyOtp(booking.id, body.code)) {
     await prisma.auditLog.create({
-      data: { action: "handover:otp_failed", resource: "booking", resourceId: booking.id, detail: `Wrong handover code entered by ${actor}` },
+      data: { action: "handover:otp_failed", resource: "booking", resourceId: booking.id, detail: `Wrong handover code entered by ${actor}`, actorId },
     });
     return NextResponse.json({ error: "That code does not match. Check with the guest and try again." }, { status: 422 });
   }
@@ -93,7 +95,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
         data: { bookingId: booking.id, from: fresh.status, to: "active", actor, note: `OTP-verified handover by ${actor}` },
       });
       await tx.auditLog.create({
-        data: { action: "handover:verified", resource: "booking", resourceId: booking.id, detail: `Guest OTP verified; caravan handed off by ${actor}` },
+        data: { action: "handover:verified", resource: "booking", resourceId: booking.id, detail: `Guest OTP verified; caravan handed off by ${actor}`, actorId },
       });
     });
   } catch (e: unknown) {

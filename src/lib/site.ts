@@ -1,13 +1,13 @@
 export const SITE = {
-  brand: "Hartley & Moor",
+  brand: "Wattle & Wander",
   tagline: "Thoughtfully equipped caravans for the freedom to travel at your own pace.",
-  city: "Bath",
-  country: "United Kingdom",
-  region: "South West England, the Cotswolds & Wales",
-  phone: "+44 1225 555 014",
-  email: "stay@hartleyandmoor.co.uk",
-  address: "Lansdown Depot, Charlcombe Lane, Bath BA1 9BT",
-  currency: "GBP",
+  city: "Melbourne",
+  country: "Australia",
+  region: "Victoria’s coast, ranges & wine regions",
+  phone: "+61 3 9123 4567",
+  email: "hello@wattleandwander.com.au",
+  address: "Brunswick Depot, 123 Sydney Rd, Brunswick VIC 3056",
+  currency: "AUD",
 };
 
 export const NAV = [

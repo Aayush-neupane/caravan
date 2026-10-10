@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { DateRangeField } from "@/components/forms/DateRangePicker";
 import { Select } from "@/components/forms/Select";
-import { gbp } from "@/lib/format";
+import { gbp, toISODate } from "@/lib/format";
 
 export type WidgetInfo = {
   name: string;
@@ -17,7 +17,9 @@ export type WidgetInfo = {
 export function CaravanBookingWidget({ slug, initialPickup, initialReturn, info }: { slug: string; initialPickup?: string; initialReturn?: string; info: WidgetInfo }) {
   const c = info;
   const router = useRouter();
-  const d = (n: number) => { const t = new Date(); t.setDate(t.getDate() + n); return t.toISOString().slice(0, 10); };
+  // Local calendar dates: toISOString() is UTC and shifts the day for
+  // anyone west of Greenwich.
+  const d = (n: number) => { const t = new Date(); t.setDate(t.getDate() + n); return toISODate(t); };
   const [pickup, setPickup] = useState(initialPickup || d(14));
   const [ret, setRet] = useState(initialReturn || d(18));
   const [travellers, setTravellers] = useState("2");
@@ -44,7 +46,7 @@ export function CaravanBookingWidget({ slug, initialPickup, initialReturn, info 
   }
 
   return (
-    <div className="border border-border bg-white p-6" style={{ borderRadius: 10 }} aria-label={`Book ${c.name}`}>
+    <div className="rounded-lg border border-border bg-white p-6" aria-label={`Book ${c.name}`}>
       <p className="tick-label">Check availability</p>
       <div className="mt-4">
         <DateRangeField
@@ -75,7 +77,7 @@ export function CaravanBookingWidget({ slug, initialPickup, initialReturn, info 
         <div className="mt-4 border-t border-border pt-4" role="status">
           {state.quote.available ? (
             <>
-              <p className="text-[0.9rem] text-success">✓ Available for {state.quote.nights} nights — <strong>{state.quote.total}</strong> incl. VAT &amp; cleaning</p>
+              <p className="text-[0.9rem] text-success">✓ Available for {state.quote.nights} nights — <strong>{state.quote.total}</strong> incl. GST &amp; cleaning</p>
               <button type="button" onClick={book} className="btn-primary mt-3 w-full">Continue to booking</button>
               <p className="mt-2 text-[0.8rem] text-muted">Refundable deposit {gbp(c.securityDepositPence)} due with balance. Itemised estimate on next step.</p>
             </>

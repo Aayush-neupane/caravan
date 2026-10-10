@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
 import { MiniOutfit, RoadStrip } from "./MiniConvoy";
 
@@ -19,6 +19,17 @@ export function ScrollRoute({
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const reduce = useReducedMotion();
+  const [isSmall, setIsSmall] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 639px)");
+    const sync = () => setIsSmall(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+  // Small screens (like reduced-motion visitors) get the strip without the
+  // scroll-driven spin — the outfit simply waits mid-road.
+  const still = reduce || isSmall;
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
   const x = useTransform(scrollYProgress, [0, 1], ["-6%", "88%"]);
   const spin = useTransform(scrollYProgress, [0, 1], [0, 720]);
@@ -39,9 +50,9 @@ export function ScrollRoute({
         ))}
         <motion.div
           className="absolute w-28 sm:w-32"
-          style={reduce ? { left: "50%", top: 33, x: "-50%" } : { left: x, top: 33, x: "-50%" }}
+          style={still ? { left: "50%", top: 33, x: "-50%" } : { left: x, top: 33, x: "-50%" }}
         >
-          <MiniOutfit spin={reduce ? undefined : spin} />
+          <MiniOutfit spin={still ? undefined : spin} />
         </motion.div>
         <div className="absolute inset-x-0 bottom-1 flex justify-between font-mono text-[0.66rem] font-bold uppercase tracking-[0.18em]" style={{ color: ink }}>
           <span>{from}</span>

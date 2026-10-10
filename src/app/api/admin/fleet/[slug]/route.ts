@@ -81,8 +81,15 @@ export async function PATCH(req: Request, { params }: { params: { slug: string }
   }
 
   const future = await prisma.booking.count({
-    where: { caravanId: caravan.id, pickupDate: { gte: new Date() }, status: { notIn: ["cancelled", "expired", "completed"] } },
+    // cancel_requested still references the van (it can return to confirmed),
+    // so it counts as a future reservation.
+    where: { caravanId: caravan.id, pickupDate: { gte: new Date() }, status: { notIn: ["cancelled", "expired", "completed", "cancel_requested"] } },
   });
+
+  // Archived is a stronger state than unpublished: un-archive first.
+  if (body.published && caravan.archived) {
+    return NextResponse.json({ error: "Archived caravans cannot be published." }, { status: 422 });
+  }
 
   // Hiding a van with future reservations needs an explicit force flag —
   // holders otherwise lose the van from under their booking view.

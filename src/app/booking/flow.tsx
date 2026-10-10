@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { CARAVANS, EXTRAS, type CatalogueCaravan } from "@/data/catalogue";
 import { DateRangeField } from "@/components/forms/DateRangePicker";
@@ -23,10 +24,27 @@ type FlowQuote = {
   totalPence: number;
   depositDuePence: number;
   balancePence: number;
+  voucherAppliedPence: number;
+  voucherCode?: string | null;
   securityDepositPence: number;
 } | null;
 
+// Outcome of a price refresh: the client must tell a genuine price/availability
+// change apart from a transport failure (retry is safe, re-review is not).
+type RefreshResult =
+  | { ok: true }
+  | { ok: false; kind: "unavailable" | "rejected" | "error"; message: string };
+
 const STEPS = ["Dates & caravan", "Extras & contact", "Review & reserve"];
+
+// Fresh idempotency key per reservation: retries/back-button/double-tab reuse
+// the current one so the server dedupes, but a NEW reservation must get a new
+// key or the first booking would be returned as a deduped hit.
+function freshIdemKey(): string {
+  return typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
 
 function Morph({ value, className }: { value: string; className?: string }) {
   return (
@@ -59,10 +77,11 @@ function Breakdown({ quote }: { quote: Exclude<FlowQuote, null> }) {
     ...(quote.couponDiscountPence > 0 ? [[`Coupon ${quote.couponCode}`, `−${gbp(quote.couponDiscountPence)}`] as [string, string, boolean?]] : []),
     [`Cleaning (mandatory)`, gbp(quote.feesPence)],
     ...(quote.extrasPence > 0 ? [[`Extras`, gbp(quote.extrasPence)] as [string, string, boolean?]] : []),
-    [`VAT 20%`, gbp(quote.taxPence)],
+    ...(quote.voucherAppliedPence > 0 ? [[`Gift voucher ${quote.voucherCode ?? ""}`, `−${gbp(quote.voucherAppliedPence)}`] as [string, string, boolean?]] : []),
+    [`GST 10%`, gbp(quote.taxPence)],
   ];
   return (
-    <dl className="space-y-1.5 text-[0.92rem]">
+    <dl className="space-y-1.5 text-[0.92rem] tabular-nums">
       {rows.map(([k, v]) => (
         <div key={k} className="flex justify-between gap-3"><dt className="text-muted">{k}</dt><dd className="whitespace-nowrap font-medium">{v}</dd></div>
       ))}
@@ -91,6 +110,8 @@ export function BookingFlow({ initial, caravans = CARAVANS }: { initial: Record<
 
   const [extras, setExtras] = useState<Record<string, number>>({});
   const [coupon, setCoupon] = useState("");
+  const [voucher, setVoucher] = useState("");
+  const [voucherOpen, setVoucherOpen] = useState(false);
   const [driverName, setDriverName] = useState("");
   const [towMake, setTowMake] = useState("");
   const [towModel, setTowModel] = useState("");
@@ -99,38 +120,70 @@ export function BookingFlow({ initial, caravans = CARAVANS }: { initial: Record<
   const [phone, setPhone] = useState("");
   const [agree, setAgree] = useState(false);
   const [placing, setPlacing] = useState(false);
-  const [done, setDone] = useState<{ reference: string; deposit: string; total: string } | null>(null);
-  // One idempotency key per page load: retries/back-button/double-tab reuse
-  // it so the server dedupes instead of creating duplicate bookings.
+  // Server figures only: the printed/downloaded ticket must match what the
+  // API actually stored, never the browser's last quote.
+  const [done, setDone] = useState<{ reference: string; depositPence: number; totalPence: number; voucherAppliedPence: number; holdExpiresAt: string } | null>(null);
+  const doneRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (done) doneRef.current?.querySelector<HTMLElement>("section")?.focus?.() ?? doneRef.current?.focus?.();
+  }, [done]);
   const idemRef = useRef<string | null>(null);
-  if (!idemRef.current) {
-    idemRef.current = typeof crypto !== "undefined" && "randomUUID" in crypto
-      ? crypto.randomUUID()
-      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  }
+  if (!idemRef.current) idemRef.current = freshIdemKey();
+
+  // Travellers come from the caravan's own capacity (API allows 1–6, vans
+  // sleep up to 6) — never a hardcoded 1–5.
+  const maxTravellersFor = (vanSlug: string) => {
+    const n = Number(caravans.find((c) => c.slug === vanSlug)?.maxTravellers);
+    return Number.isFinite(n) && n >= 1 ? Math.min(6, Math.floor(n)) : 6;
+  };
+  const maxTravellers = maxTravellersFor(slug);
+  const travellerOptions = useMemo(
+    () => Array.from({ length: maxTravellers }, (_, i) => ({ value: String(i + 1), label: `${i + 1} traveller${i > 0 ? "s" : ""}` })),
+    [maxTravellers]
+  );
 
   const caravan = useMemo(() => caravans.find((c) => c.slug === slug) ?? caravans[0], [slug, caravans]);
+  // Keep the selection inside the current van's capacity (initial query
+  // params or a caravan switch can otherwise leave an out-of-range value).
+  useEffect(() => {
+    if (Number(travellers) > maxTravellers) setTravellers(String(maxTravellers));
+  }, [maxTravellers, travellers]);
   const extrasList = useMemo(
     () => Object.entries(extras).filter(([, q]) => q > 0).map(([exSlug, qty]) => ({ slug: exSlug, qty })),
     [extras]
   );
 
-  async function refreshQuote(withExtras: { slug: string; qty: number }[], withCoupon: string): Promise<boolean> {
+  async function refreshQuote(withExtras: { slug: string; qty: number }[], withCoupon: string, withVoucher?: string): Promise<RefreshResult> {
     setChecking(true); setError(null); setUnavailMsg(null);
     try {
       const r = await fetch("/api/quote", {
         method: "POST", headers: { "content-type": "application/json" },
-        body: JSON.stringify({ slug, pickup, return: ret, travellers: Number(travellers), extras: withExtras, coupon: withCoupon || undefined }),
+        body: JSON.stringify({ slug, pickup, return: ret, travellers: Number(travellers), extras: withExtras, coupon: withCoupon || undefined, voucher: (withVoucher ?? voucher).trim() || undefined }),
       });
-      const j = await r.json();
-      if (!r.ok) throw new Error(j.error ?? "Price check failed");
-      if (!j.available) { setAvailable(false); setUnavailMsg(j.message ?? "Those dates are not available."); setQuote(null); return false; }
+      const j = await r.json().catch(() => ({}));
+      // 5xx / network = transport failure: the price was never checked, so
+      // say so instead of blaming a price change.
+      if (!r.ok && r.status >= 500) {
+        setError("Could not refresh your price. Please retry.");
+        return { ok: false, kind: "error", message: "Could not refresh your price. Please retry." };
+      }
+      if (!r.ok) {
+        const message = j.error ?? "Price check failed";
+        setError(message);
+        return { ok: false, kind: "rejected", message };
+      }
+      if (!j.available) {
+        const message = j.message ?? "Those dates are not available.";
+        setAvailable(false); setUnavailMsg(message); setQuote(null);
+        return { ok: false, kind: "unavailable", message };
+      }
       setAvailable(true);
       setQuote(j.quote);
-      return true;
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Price check failed");
-      return false;
+      return { ok: true };
+    } catch {
+      const message = "Could not refresh your price. Please retry.";
+      setError(message);
+      return { ok: false, kind: "error", message };
     } finally { setChecking(false); }
   }
 
@@ -144,13 +197,17 @@ export function BookingFlow({ initial, caravans = CARAVANS }: { initial: Record<
     try {
       // Re-quote immediately before reserving so the voucher totals cannot
       // go stale between step 2 and submitting.
-      const fresh = await refreshQuote(extrasList, coupon);
-      if (!fresh) throw new Error("Price changed — please review the new total before reserving.");
+      const fresh = await refreshQuote(extrasList, coupon, voucher);
+      if (!fresh.ok) {
+        if (fresh.kind === "error") throw new Error("Could not refresh your price. Please retry.");
+        if (fresh.kind === "unavailable") throw new Error(fresh.message);
+        throw new Error("Price changed — please review the new total before reserving.");
+      }
       const r = await fetch("/api/bookings", {
         method: "POST", headers: { "content-type": "application/json", "x-idempotency-key": idemRef.current! },
         body: JSON.stringify({
           slug, pickup, return: ret, travellers: Number(travellers),
-          extras: extrasList, coupon: coupon || undefined,
+          extras: extrasList, coupon: coupon || undefined, voucher: voucher.trim() || undefined,
           idempotencyKey: idemRef.current,
           customer: { name, email, phone, driverName, towMake, towModel },
           agree: true,
@@ -158,7 +215,10 @@ export function BookingFlow({ initial, caravans = CARAVANS }: { initial: Record<
       });
       const j = await r.json();
       if (!r.ok) throw new Error(j.error ?? "Booking failed");
-      setDone({ reference: j.reference, deposit: gbp(j.depositDuePence), total: gbp(j.totalPence) });
+      // Only the server's figures travel onto the ticket.
+      setDone({ reference: j.reference, depositPence: j.depositDuePence, totalPence: j.totalPence, voucherAppliedPence: j.voucherAppliedPence ?? 0, holdExpiresAt: j.holdExpiresAt ?? "" });
+      // Next reservation gets a fresh key (this one now dedupes to j.reference).
+      idemRef.current = freshIdemKey();
     } catch (e) { setError(e instanceof Error ? e.message : "Booking failed"); } finally { setPlacing(false); }
   }
 
@@ -181,8 +241,8 @@ export function BookingFlow({ initial, caravans = CARAVANS }: { initial: Record<
             <div className="lg:col-span-4">
               <Select
                 id="b-car" label="Caravan"
-                value={slug} onChange={(v) => { setSlug(v); setQuote(null); setAvailable(null); }}
-                options={caravans.map((c) => ({ value: c.slug, label: c.name, hint: `sleeps ${c.berths} · ${gbp(c.baseNightlyPence)}/nt` }))}
+                value={slug} onChange={(v) => { setSlug(v); setQuote(null); setAvailable(null); if (Number(travellers) > maxTravellersFor(v)) setTravellers(String(maxTravellersFor(v))); }}
+                options={caravans.map((c) => ({ value: c.slug, label: c.name, hint: `sleeps ${c.maxTravellers} · ${gbp(c.baseNightlyPence)}/nt` }))}
               />
             </div>
             <div className="lg:col-span-5">
@@ -196,7 +256,7 @@ export function BookingFlow({ initial, caravans = CARAVANS }: { initial: Record<
               <Select
                 id="b-trav" label="Travellers"
                 value={travellers} onChange={setTravellers}
-                options={[1, 2, 3, 4, 5].map((n) => ({ value: String(n), label: `${n} traveller${n > 1 ? "s" : ""}` }))}
+                options={travellerOptions}
               />
             </div>
           </div>
@@ -240,24 +300,45 @@ export function BookingFlow({ initial, caravans = CARAVANS }: { initial: Record<
             <div className="mt-4 flex flex-wrap items-end gap-3">
               <div className="min-w-52 flex-1">
                 <label className="field-label" htmlFor="b-coupon">Coupon code (optional)</label>
-                <input id="b-coupon" className="field-input uppercase" value={coupon} onChange={(e) => setCoupon(e.target.value.toUpperCase())} placeholder="SLOW10" maxLength={24} />
+                <input id="b-coupon" name="coupon" className="field-input uppercase" value={coupon} onChange={(e) => setCoupon(e.target.value.toUpperCase())} placeholder="SLOW10…" maxLength={24} autoComplete="off" spellCheck={false} />
               </div>
-              <button type="button" onClick={() => refreshQuote(extrasList, coupon)} disabled={checking} className="btn-secondary !py-2.5">
+              <button type="button" onClick={async () => { const ok = await refreshQuote(extrasList, coupon, voucher); if (ok && voucher.trim()) setVoucherOpen(false); }} disabled={checking} className="btn-secondary !py-2.5">
                 {checking ? "Applying…" : "Apply to price"}
               </button>
             </div>
+            <div className="mt-3">
+              <button type="button" onClick={() => setVoucherOpen((v) => !v)} className="text-[0.85rem] font-semibold text-forest underline" aria-expanded={voucherOpen}>
+                Have a gift voucher?
+              </button>
+              {voucherOpen && (
+                <div className="mt-2 flex flex-wrap items-end gap-3">
+                  <div className="min-w-52 flex-1">
+                    <label className="field-label" htmlFor="b-voucher">Gift voucher code</label>
+                    <input id="b-voucher" name="voucher" className="field-input uppercase" value={voucher} onChange={(e) => setVoucher(e.target.value.toUpperCase())} placeholder="GIFT-250…" maxLength={32} autoComplete="off" spellCheck={false} />
+                  </div>
+                  <button type="button" onClick={async () => { const ok = await refreshQuote(extrasList, coupon, voucher); if (ok) setVoucherOpen(false); }} disabled={checking} className="btn-secondary !py-2.5">
+                    {checking ? "Checking…" : "Redeem voucher"}
+                  </button>
+                </div>
+              )}
+              {voucher.trim() && quote && quote.voucherAppliedPence > 0 && (
+                <p className="mt-2 text-[0.82rem] font-semibold text-success">
+                  ✓ Voucher {voucher.trim().toUpperCase()} applied — {gbp(quote.voucherAppliedPence)} off the deposit due now
+                </p>
+              )}
+            </div>
             <h2 className="mt-6 font-display text-2xl">Eligibility</h2>
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              <div className="sm:col-span-2"><label className="field-label" htmlFor="b-driver">Main driver full name *</label><input id="b-driver" className="field-input" value={driverName} onChange={(e) => setDriverName(e.target.value)} placeholder="As on driving licence" /></div>
-              <div><label className="field-label" htmlFor="b-make">Tow car make *</label><input id="b-make" className="field-input" value={towMake} onChange={(e) => setTowMake(e.target.value)} placeholder="e.g. Volvo" /></div>
-              <div><label className="field-label" htmlFor="b-model">Tow car model *</label><input id="b-model" className="field-input" value={towModel} onChange={(e) => setTowModel(e.target.value)} placeholder="e.g. XC60 D5" /></div>
+              <div className="sm:col-span-2"><label className="field-label" htmlFor="b-driver">Main driver full name *</label><input id="b-driver" name="driverName" className="field-input" value={driverName} onChange={(e) => setDriverName(e.target.value)} placeholder="As on driving licence…" autoComplete="name" /></div>
+              <div><label className="field-label" htmlFor="b-make">Tow vehicle make *</label><input id="b-make" name="towMake" className="field-input" value={towMake} onChange={(e) => setTowMake(e.target.value)} placeholder="e.g. Toyota…" autoComplete="off" /></div>
+              <div><label className="field-label" htmlFor="b-model">Tow vehicle model *</label><input id="b-model" name="towModel" className="field-input" value={towModel} onChange={(e) => setTowModel(e.target.value)} placeholder="e.g. LandCruiser…" autoComplete="off" /></div>
             </div>
-            <p className="mt-3 text-[0.85rem] text-muted">Licence and tow-car match are checked by staff at the depot counter — this form never grants them. See the <a href="/towing-guide" className="underline">towing guide</a>.</p>
+            <p className="mt-3 text-[0.85rem] text-muted">Licence and tow-vehicle match are checked by staff at the depot counter — this form never grants them. See the <Link href="/towing-guide" className="underline">towing guide</Link>.</p>
             <div className="mt-5 flex gap-3">
               <button type="button" onClick={() => go(0)} className="btn-secondary">← Back</button>
               <button type="button" onClick={async () => {
                 if (!driverName || !towMake || !towModel) { setError("Please give the driver name and tow car make/model."); return; }
-                const ok = await refreshQuote(extrasList, coupon);
+                const ok = await refreshQuote(extrasList, coupon, voucher);
                 if (ok) go(2);
               }} disabled={checking} className="btn-primary">Continue to review →</button>
             </div>
@@ -282,13 +363,13 @@ export function BookingFlow({ initial, caravans = CARAVANS }: { initial: Record<
           <div className="border border-border bg-white p-6 lg:col-span-7" style={{ borderRadius: 10 }}>
             <h2 className="font-display text-2xl">Contact details</h2>
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              <div><label className="field-label" htmlFor="b-name">Full name *</label><input id="b-name" className="field-input" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" /></div>
-              <div><label className="field-label" htmlFor="b-phone">Phone *</label><input id="b-phone" className="field-input" value={phone} onChange={(e) => setPhone(e.target.value)} autoComplete="tel" /></div>
-              <div className="sm:col-span-2"><label className="field-label" htmlFor="b-email">Email *</label><input id="b-email" type="email" className="field-input" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" /></div>
+              <div><label className="field-label" htmlFor="b-name">Full name *</label><input id="b-name" name="name" className="field-input" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" placeholder="Jordan Citizen…" /></div>
+              <div><label className="field-label" htmlFor="b-phone">Phone *</label><input id="b-phone" name="phone" type="tel" inputMode="tel" className="field-input" value={phone} onChange={(e) => setPhone(e.target.value)} autoComplete="tel" placeholder="+61 4…" /></div>
+              <div className="sm:col-span-2"><label className="field-label" htmlFor="b-email">Email *</label><input id="b-email" name="email" type="email" className="field-input" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" spellCheck={false} placeholder="you@example.com…" /></div>
             </div>
             <h2 className="mt-6 font-display text-2xl">Rental agreement</h2>
             <div className="mt-2 border border-border bg-paper p-4 text-[0.88rem] leading-relaxed" style={{ borderRadius: 8 }}>
-              <p>Agreement v2026.1 (template). Hirer accepts responsibility for weights, speed limits and return condition; deposit deductions require documented evidence and joint inspection notes. Cancellation: 28+ days full refund, 14–28 days 50%, within 14 days deposit retained.</p>
+              <p>Agreement v2026.1. Hirer accepts responsibility for weights, speed limits and return condition; deposit deductions require documented evidence and joint inspection notes. Cancellation: 28+ days full refund, 14–28 days 50%, within 14 days deposit retained.</p>
             </div>
             <label className="mt-3 flex cursor-pointer items-start gap-2 text-[0.9rem]">
               <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} className="mt-1 h-4 w-4 accent-[#1A2B23]" />
@@ -318,7 +399,8 @@ export function BookingFlow({ initial, caravans = CARAVANS }: { initial: Record<
       )}
 
       {done && (
-        <div className="mt-6 space-y-4">
+        <div className="mt-6 space-y-4" ref={doneRef}>
+          <div role="status" aria-live="polite" tabIndex={-1} className="outline-none">
           <VoucherTicket
             ticket={{
               reference: done.reference,
@@ -326,14 +408,31 @@ export function BookingFlow({ initial, caravans = CARAVANS }: { initial: Record<
               caravan: caravan.name,
               pickup,
               ret,
-              totalPence: quote?.totalPence ?? 0,
-              depositDuePence: quote?.depositDuePence ?? 0,
+              totalPence: done.totalPence,
+              depositDuePence: done.depositPence,
               status: "held",
             }}
           />
+          {done.voucherAppliedPence > 0 && (
+            <p className="text-[0.88rem] font-semibold text-success">✓ Gift voucher applied — {gbp(done.voucherAppliedPence)} of the deposit settled from your voucher.</p>
+          )}
+          {done.holdExpiresAt && (
+            <p className="text-[0.85rem] text-muted">
+              These dates are held until {new Date(done.holdExpiresAt).toLocaleString("en-AU", { dateStyle: "medium", timeStyle: "short" })} — after that the reservation lapses and the dates are released.
+            </p>
+          )}
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="font-mono text-[0.68rem] font-bold uppercase tracking-[0.18em] text-success">✓ Reserved — see you at the depot</p>
-            <button type="button" className="btn-secondary" onClick={() => { setDone(null); go(0); }}>New booking</button>
+            <button type="button" className="btn-secondary" onClick={() => {
+              // Fresh reservation: clear the form and issue a new idempotency
+              // key so this booking is never returned as a deduped hit.
+              setDone(null); setQuote(null); setAvailable(null);
+              setExtras({}); setCoupon(""); setVoucher(""); setVoucherOpen(false);
+              setName(""); setEmail(""); setPhone(""); setDriverName(""); setTowMake(""); setTowModel(""); setAgree(false);
+              idemRef.current = freshIdemKey();
+              go(0);
+            }}>New booking</button>
+          </div>
           </div>
         </div>
       )}

@@ -1,14 +1,14 @@
 // Hartley & Moor — authoritative relational model.
-// Local dev uses SQLite (file:./dev.db) for zero-config runs.
-// Production uses PostgreSQL: change provider to "postgresql" and set DATABASE_URL.
-// The schema avoids provider-specific native types so the same model migrates cleanly.
+// PostgreSQL is canonical (all environments, incl. local via docker-compose).
+// String columns holding JSON stay String (no Json migration rewrite).
+// The schema avoids provider-specific native types so it migrates cleanly.
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -167,6 +167,11 @@ model Booking {
   driver           BookingDriver?
   towVehicle       TowingVehicle?
   notifications    Notification[]
+  voucherRedemptions VoucherRedemption[]
+  holds            BookingHold[]
+
+  @@index([caravanId, status, pickupDate])
+  @@index([status, pickupDate])
 }
 
 model BookingStatusHistory {
@@ -187,9 +192,13 @@ model BookingHold {
   pickupDate DateTime
   returnDate DateTime
   token     String   @unique
-  bookingId String?
+  bookingId String?  @unique
+  booking   Booking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
   expiresAt DateTime
   createdAt DateTime @default(now())
+
+  @@index([caravanId, expiresAt])
+  @@index([caravanId, pickupDate, returnDate])
 }
 
 model AvailabilityBlock {
@@ -200,6 +209,8 @@ model AvailabilityBlock {
   endDate   DateTime
   reason    String
   createdAt DateTime @default(now())
+
+  @@index([caravanId, startDate, endDate])
 }
 
 model BookingDriver {
@@ -255,6 +266,8 @@ model CustomerDocument {
   reviewerNote String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([bookingId, status])
 }
 
 model ReturnInspection {
@@ -313,6 +326,7 @@ model VoucherRedemption {
   voucherId String
   voucher   Voucher  @relation(fields: [voucherId], references: [id], onDelete: Cascade)
   bookingId String
+  booking   Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   amountPence Int
   createdAt DateTime @default(now())
 }
@@ -329,6 +343,8 @@ model Payment {
   idempotencyKey String?  @unique
   rawPayload     String?
   createdAt      DateTime @default(now())
+
+  @@index([bookingId, status])
 }
 
 model Refund {
@@ -340,6 +356,11 @@ model Refund {
   status      String   @default("recorded")
   actor       String?
   createdAt   DateTime @default(now())
+
+  // Multiple refunds per booking are legal (deposit release + cancellation,
+  // partial refunds). Uniqueness is enforced in code per business rule, not
+  // by a single-row DB constraint.
+  @@index([bookingId, createdAt])
 }
 
 model MaintenanceRecord {
@@ -354,6 +375,8 @@ model MaintenanceRecord {
   assignee    String?
   done        Boolean  @default(false)
   createdAt   DateTime @default(now())
+
+  @@index([caravanId, startDate, endDate])
 }
 
 model Notification {
@@ -366,6 +389,8 @@ model Notification {
   body      String
   status    String   @default("queued")
   createdAt DateTime @default(now())
+
+  @@index([bookingId, status])
 }
 
 model AuditLog {

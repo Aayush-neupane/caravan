@@ -27,8 +27,8 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   let body: z.infer<typeof Body>;
   try {
     body = Body.parse(await req.json());
-  } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : "Invalid request." }, { status: 400 });
+  } catch {
+    return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   }
 
   const doc = await prisma.customerDocument.findUnique({ where: { id: params.id }, include: { booking: true } });
@@ -46,12 +46,16 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       data: {
         action: `documents:${body.status}`, resource: "document", resourceId: doc.id,
         detail: `${doc.kind} for ${doc.booking.reference} by ${session.user?.email ?? role}${body.reviewerNote ? `: ${body.reviewerNote.trim().slice(0, 120)}` : ""}`,
+        actorId: (session.user as { id?: string })?.id ?? undefined,
       },
     });
 
     if (body.status === "approved" && doc.booking.status === "awaiting_documents") {
+      // Any non-approved doc blocks confirmation (rejected /
+      // resubmission_requested included — not just pending). Zero
+      // outstanding means every doc on the booking is approved.
       const outstanding = await tx.customerDocument.count({
-        where: { bookingId: doc.bookingId, id: { not: doc.id }, status: { in: ["uploaded", "under_review"] } },
+        where: { bookingId: doc.bookingId, status: { not: "approved" } },
       });
       if (outstanding === 0) {
         // Belt-and-braces: awaiting_documents is only reachable past verified
@@ -60,7 +64,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
         const paid = await tx.payment.count({ where: { bookingId: doc.bookingId, status: "succeeded" } });
         if (paid === 0) {
           await tx.auditLog.create({
-            data: { action: "documents:confirm_blocked", resource: "booking", resourceId: doc.bookingId, detail: `Docs complete but no succeeded payment — held at awaiting_documents by ${session.user?.email ?? role}` },
+            data: { action: "documents:confirm_blocked", resource: "booking", resourceId: doc.bookingId, detail: `Docs complete but no succeeded payment — held at awaiting_documents by ${session.user?.email ?? role}`, actorId: (session.user as { id?: string })?.id ?? undefined },
           });
         } else {
           try {

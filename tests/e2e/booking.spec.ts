@@ -27,7 +27,7 @@ test("booking flow shows itemised breakdown with seasonal and extras", async ({ 
   await expect(page.getByText(/is available for/i)).toBeVisible({ timeout: 15000 });
   // Itemised lines render from the server quote.
   await expect(page.getByText(/Nightly base/)).toBeVisible();
-  await expect(page.getByText(/VAT 20%/)).toBeVisible();
+  await expect(page.getByText(/GST 10%/)).toBeVisible();
   await page.getByRole("button", { name: /Continue to extras/ }).click();
   await page.getByRole("button", { name: /Apply to price/i }).click();
   await expect(page.getByText(/Live price/)).toBeVisible();

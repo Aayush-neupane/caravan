@@ -56,7 +56,7 @@ export default async function AdminOverview() {
     });
   } catch { /* unmigrated */ }
 
-  const weekday = new Date().toLocaleDateString("en-GB", { weekday: "long" });
+  const weekday = new Date().toLocaleDateString("en-AU", { weekday: "long" });
   return (
     <div>
       <p className="tick-label">{weekday} briefing · live from the books</p>
@@ -88,12 +88,9 @@ export default async function AdminOverview() {
                       <span
                         key={i}
                         title={`${day.date} — ${day.state}`}
-                        className="h-7 flex-1"
-                        style={{
-                          borderRadius: 3,
-                          background: day.state === "booked" ? "#1A2B23" : day.state === "blocked" ? "#C9A86A" : "#E3E1D8",
-                          border: "1px solid #DCDDD5",
-                        }}
+                        className={`h-7 flex-1 rounded-sm border border-border ${
+                          day.state === "booked" ? "bg-forest" : day.state === "blocked" ? "bg-amber" : "bg-border"
+                        }`}
                       />
                     ))}
                   </div>
@@ -102,9 +99,9 @@ export default async function AdminOverview() {
             </ul>
           )}
           <div className="mt-3 flex gap-4 text-[0.75rem] text-muted">
-            <span className="flex items-center gap-1.5"><i className="inline-block h-2.5 w-2.5 bg-forest" style={{ borderRadius: 2 }} /> Booked</span>
-            <span className="flex items-center gap-1.5"><i className="inline-block h-2.5 w-2.5 bg-amber" style={{ borderRadius: 2 }} /> Maintenance</span>
-            <span className="flex items-center gap-1.5"><i className="inline-block h-2.5 w-2.5 border border-border bg-[#E3E1D8]" style={{ borderRadius: 2 }} /> Free</span>
+            <span className="flex items-center gap-1.5"><i className="inline-block h-2.5 w-2.5 rounded-sm bg-forest" /> Booked</span>
+            <span className="flex items-center gap-1.5"><i className="inline-block h-2.5 w-2.5 rounded-sm bg-amber" /> Maintenance</span>
+            <span className="flex items-center gap-1.5"><i className="inline-block h-2.5 w-2.5 rounded-sm border border-border bg-border" /> Free</span>
           </div>
         </Panel>
 

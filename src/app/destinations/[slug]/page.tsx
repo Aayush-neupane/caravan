@@ -39,7 +39,7 @@ export default function DestinationDetail({ params }: { params: { slug: string }
           <p className="mt-3 leading-relaxed text-charcoal/85"><strong>When:</strong> {d.season}</p>
           <p className="mt-2 leading-relaxed text-charcoal/85">{d.practical}</p>
           <p className="mt-4 border border-border bg-white p-4 text-[0.88rem] text-muted" style={{ borderRadius: 8 }}>
-            Distances are approximate road miles between stops. Campsite availability, opening hours and restrictions
+            Distances are approximate road kilometres between stops. Campsite availability, opening hours and restrictions
             change — confirm directly with sites. If animation is disabled, this page reads identically.
           </p>
         </div>

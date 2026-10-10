@@ -56,7 +56,7 @@ export function TopoLines({ dark = false, variant = 0, className = "" }: { dark?
 }
 
 // Rotating expedition stamp. Static when reduced motion is preferred.
-export function Stamp({ text = "SLOW TRAVEL • BATH • EST 2026 • ", size = 112, dark = false }: { text?: string; size?: number; dark?: boolean }) {
+export function Stamp({ text = "SLOW TRAVEL • MELB • EST 2026 • ", size = 112, dark = false }: { text?: string; size?: number; dark?: boolean }) {
   const uid = useId().replace(/:/g, "");
   const ink = dark ? "#EDE6D6" : "#1A2B23";
   return (
@@ -146,6 +146,8 @@ export function Framed({
       <img
         src={src}
         alt={alt}
+        width={1600}
+        height={1000}
         loading={eager ? "eager" : "lazy"}
         className={`${ratio} w-full object-cover transition-transform duration-500 group-hover:scale-[1.045]`}
       />

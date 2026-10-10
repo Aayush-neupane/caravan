@@ -7,6 +7,9 @@ import { AdminSignOut } from "./signout";
 import { AdminFade } from "./fade";
 
 // Ops dashboards must never serve a stale static snapshot.
+// Layout gate is staff-only; per-page and per-API actions enforce narrower
+// roles (support/analyst see dashboards with PII masked, mutations need
+// can(action, role)).
 export const dynamic = "force-dynamic";
 
 const GROUPS: { title: string; items: [string, string][] }[] = [
@@ -16,7 +19,7 @@ const GROUPS: { title: string; items: [string, string][] }[] = [
   },
   {
     title: "Business",
-    items: [["Fleet", "/admin/fleet"], ["Pricing", "/admin/pricing"], ["Coupons", "/admin/coupons"], ["Payments", "/admin/payments"], ["Maintenance", "/admin/maintenance"]],
+    items: [["Fleet", "/admin/fleet"], ["Pricing", "/admin/pricing"], ["Coupons", "/admin/coupons"], ["Vouchers", "/admin/vouchers"], ["Payments", "/admin/payments"], ["Maintenance", "/admin/maintenance"]],
   },
   {
     title: "Guests",
@@ -35,34 +38,33 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   if (!isStaff(role)) redirect("/account?error=staff_only");
 
   return (
-    <div className="min-h-screen bg-[#EFEDE6] lg:grid lg:grid-cols-[15rem_1fr]">
+    <div className="min-h-screen bg-sand/40 md:grid md:grid-cols-[15rem_1fr]">
       {/* Sidebar: header fixed, menu scrolls on its own, account pinned */}
-      <aside className="bg-forest text-paper lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col lg:overflow-hidden">
-        <div className="flex shrink-0 items-center justify-between px-5 pb-4 pt-5 lg:block">
+      <aside className="bg-forest text-paper md:sticky md:top-0 md:flex md:h-screen md:flex-col md:overflow-hidden">
+        <div className="flex shrink-0 items-center justify-between px-5 pb-4 pt-5 md:block">
           <div className="flex items-center gap-2.5">
             <Compass size={30} className="text-sand" />
             <div>
-              <p className="font-display text-[1.4rem] leading-none">Hartley <span className="text-amber">&amp;</span> Moor</p>
-              <p className="mt-1.5 text-[0.68rem] font-bold uppercase tracking-[0.18em] text-paper/55">Operations</p>
+              <p className="font-display text-[1.4rem] leading-none">Wattle <span className="text-amber">&amp;</span> Wander</p>
+              <p className="mt-1.5 text-[0.68rem] font-bold uppercase tracking-[0.18em] text-paper/75">Operations</p>
             </div>
           </div>
-          <Link href="/" className="text-[0.8rem] text-paper/70 underline underline-offset-2 hover:text-white lg:mt-3 lg:inline-block">
+          <Link href="/" className="text-[0.8rem] text-paper/75 underline underline-offset-2 hover:text-white md:mt-3 md:inline-block">
             ← View site
           </Link>
         </div>
-        <nav className="flex gap-4 overflow-x-auto px-5 pb-4 lg:min-h-0 lg:flex-1 lg:grid lg:gap-5 lg:overflow-y-auto lg:px-4 lg:pb-6" aria-label="Admin">
+        <nav className="flex gap-4 overflow-x-auto px-5 pb-4 md:min-h-0 md:flex-1 md:grid md:gap-5 md:overflow-y-auto md:px-4 md:pb-6" aria-label="Admin">
           {GROUPS.map((g) => (
-            <div key={g.title} className="min-w-36 shrink-0 lg:min-w-0">
-              <p className="hidden font-mono text-[0.66rem] font-bold uppercase tracking-[0.2em] text-amber/80 lg:mb-1.5 lg:block">{g.title}</p>
-              <ul className="flex gap-1.5 lg:grid">
+            <div key={g.title} className="min-w-36 shrink-0 md:min-w-0">
+              <p className="hidden font-mono text-[0.66rem] font-bold uppercase tracking-[0.2em] text-amber/80 md:mb-1.5 md:block">{g.title}</p>
+              <ul className="flex gap-1.5 md:grid">
                 {g.items.map(([label, href]) => (
                   <li key={href}>
                     <Link
                       href={href}
-                      className="block whitespace-nowrap px-3 py-2 text-[0.85rem] font-medium text-paper/80 transition-colors hover:bg-white/10 hover:text-white"
-                      style={{ borderRadius: 6 }}
+                      className="block whitespace-nowrap rounded-md px-3 py-2 text-[0.85rem] font-medium text-paper/75 transition-colors hover:bg-white/10 hover:text-white"
                     >
-                      <span className="lg:hidden">{g.title} · </span>{label}
+                      <span className="md:hidden">{g.title} · </span>{label}
                     </Link>
                   </li>
                 ))}
@@ -70,8 +72,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             </div>
           ))}
         </nav>
-        <div className="shrink-0 border-t border-white/15 px-5 py-3 lg:px-4">
-          <p className="truncate text-[0.75rem] text-paper/55">{session.user?.email}</p>
+        <div className="shrink-0 border-t border-white/15 px-5 py-3 md:px-4">
+          <p className="truncate text-[0.75rem] text-paper/75">{session.user?.email}</p>
           <div className="mt-1.5 flex items-center justify-between gap-2">
             <p className="text-[0.72rem] font-bold uppercase tracking-wider text-amber">{role}</p>
             <div className="w-28"><AdminSignOut /></div>

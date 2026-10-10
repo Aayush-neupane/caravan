@@ -34,8 +34,7 @@ export function BookingSearchPanel({ compact = false }: { compact?: boolean }) {
   return (
     <form
       onSubmit={submit}
-      className="border border-border bg-white p-5 sm:p-6"
-      style={{ borderRadius: 10 }}
+      className="rounded-lg border border-border bg-white p-5 sm:p-6"
       aria-label="Check availability"
     >
       <div className={`grid gap-4 ${compact ? "sm:grid-cols-2" : "sm:grid-cols-2 lg:grid-cols-12"}`}>
@@ -63,38 +62,20 @@ export function BookingSearchPanel({ compact = false }: { compact?: boolean }) {
             ]}
           />
         </div>
-        {!compact && (
-          <div className="lg:col-span-4">
-            <Select
-              id="hero-cat"
-              label="Caravan type"
-              value={category}
-              onChange={setCategory}
-              options={[
-                { value: "any", label: "Any caravan" },
-                { value: "Compact Tourer", label: "Compact tourer", hint: "sleeps 2" },
-                { value: "Premium Two-Berth", label: "Premium two-berth", hint: "sleeps 2" },
-                { value: "Family Four-Berth", label: "Family four-berth", hint: "sleeps 4" },
-              ]}
-            />
-          </div>
-        )}
-        {compact && (
-          <div>
-            <Select
-              id="hero-cat"
-              label="Caravan type"
-              value={category}
-              onChange={setCategory}
-              options={[
-                { value: "any", label: "Any caravan" },
-                { value: "Compact Tourer", label: "Compact tourer" },
-                { value: "Premium Two-Berth", label: "Premium two-berth" },
-                { value: "Family Four-Berth", label: "Family four-berth" },
-              ]}
-            />
-          </div>
-        )}
+        <div className={compact ? "" : "lg:col-span-4"}>
+          <Select
+            id="hero-cat"
+            label="Caravan type"
+            value={category}
+            onChange={setCategory}
+            options={[
+              { value: "any", label: "Any caravan" },
+              { value: "Compact Tourer", label: "Compact tourer", hint: "sleeps 2" },
+              { value: "Premium Two-Berth", label: "Premium two-berth", hint: "sleeps 2" },
+              { value: "Family Four-Berth", label: "Family four-berth", hint: "sleeps 4" },
+            ]}
+          />
+        </div>
       </div>
       <button type="submit" className="btn-primary mt-4 w-full !py-3.5 !text-base">
         Check availability

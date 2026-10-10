@@ -9,7 +9,7 @@ export default function Loading() {
         <Compass size={64} className="text-forest" />
       </span>
       <p className="font-display text-2xl text-charcoal">Reading the map…</p>
-      <p className="font-mono text-[0.68rem] font-bold uppercase tracking-[0.22em] text-muted">Hartley &amp; Moor · Bath</p>
+      <p className="font-mono text-[0.68rem] font-bold uppercase tracking-[0.22em] text-muted">Wattle &amp; Wander · Melbourne</p>
     </div>
   );
 }

@@ -3,10 +3,10 @@ import type { CatalogueCaravan } from "@/data/catalogue";
 import { Framed } from "@/components/editorial/Decor";
 import { gbp } from "@/lib/format";
 
-export function FleetCard({ caravan, pickup, ret }: { caravan: CatalogueCaravan; pickup?: string; ret?: string }) {
+export function FleetCard({ caravan, pickup, ret, available }: { caravan: CatalogueCaravan; pickup?: string; ret?: string; available?: boolean }) {
   const qs = pickup && ret ? `?pickup=${pickup}&return=${ret}` : "";
   return (
-    <article className="group overflow-hidden border border-border bg-white transition-colors hover:border-forest/50" style={{ borderRadius: 10 }}>
+    <article className="group overflow-hidden rounded-lg border border-border bg-white transition-colors hover:border-forest/50">
       <Link href={`/fleet/${caravan.slug}${qs}`} aria-label={`View ${caravan.name}`} className="block p-2 pb-0">
         <Framed
           src={caravan.images[0].url.replace("w=1600", "w=900")}
@@ -18,10 +18,18 @@ export function FleetCard({ caravan, pickup, ret }: { caravan: CatalogueCaravan;
       <div className="p-5">
         <div className="flex items-center justify-between gap-2">
           <p className="tick-label">{caravan.category}</p>
-          <p className="font-mono text-[0.68rem] font-bold uppercase tracking-wider text-amberDark">Nº {caravan.slug.replace("the-", "").toUpperCase()}</p>
+          {available === false ? (
+            <p role="status" className="rounded-sm bg-error/10 px-2 py-0.5 font-mono text-[0.68rem] font-bold uppercase tracking-wider text-error">Booked those dates</p>
+          ) : available === true ? (
+            <p role="status" className="rounded-sm bg-success/10 px-2 py-0.5 font-mono text-[0.68rem] font-bold uppercase tracking-wider text-success">Available</p>
+          ) : (
+            <p className="font-mono text-[0.68rem] font-bold uppercase tracking-wider text-amberInk">Nº {caravan.slug.replace("the-", "").toUpperCase()}</p>
+          )}
         </div>
         <h3 className="mt-1 font-display text-2xl text-charcoal">
-          <Link href={`/fleet/${caravan.slug}${qs}`} className="hover:text-forest">{caravan.name}</Link>
+          {/* Duplicate tab stop removed: the photo link and the
+              "View & book" button below carry the navigation. */}
+          <Link href={`/fleet/${caravan.slug}${qs}`} tabIndex={-1} className="hover:text-forest">{caravan.name}</Link>
         </h3>
         <p className="mt-1 text-[0.9rem] text-muted">{caravan.tagline} · Sleeps {caravan.berths} · {caravan.mtplmKg.toLocaleString()} kg MTPLM</p>
         <p className="mt-3 line-clamp-2 text-[0.92rem] leading-relaxed text-charcoal/85">{caravan.description}</p>

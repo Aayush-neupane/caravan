@@ -39,33 +39,77 @@ export async function POST(req: Request) {
   const caravan = await prisma.caravan.findUnique({ where: { slug: body.caravanSlug } });
   if (!caravan) return NextResponse.json({ error: "Caravan not found." }, { status: 404 });
 
-  const clash = await prisma.booking.findFirst({
-    where: {
-      caravanId: caravan.id,
-      status: { in: [...BLOCKING_STATUSES] },
-      pickupDate: { lt: end },
-      returnDate: { gt: start },
-    },
-    select: { reference: true },
-  });
-  if (clash) {
-    return NextResponse.json(
-      { error: `Overlaps live reservation ${clash.reference}. Move the booking first.` },
-      { status: 409 }
-    );
+  const bufEnd = new Date(end);
+  bufEnd.setUTCDate(bufEnd.getUTCDate() + 1);
+  const bufStart = start;
+  const nowTs = new Date();
+  const checkClash = async (
+    findBooking: () => Promise<{ reference: string; pickupDate: Date; returnDate: Date } | null>,
+    findHold: () => Promise<{ pickupDate: Date; returnDate: Date } | null>,
+    findBlock: () => Promise<unknown>,
+    findMaint: () => Promise<unknown>
+  ): Promise<string | null> => {
+    const b = await findBooking();
+    if (b) {
+      const exEnd = new Date(b.returnDate);
+      exEnd.setUTCDate(exEnd.getUTCDate() + 1);
+      if (new Date(b.pickupDate) < bufEnd && bufStart < exEnd) return `Overlaps live reservation ${b.reference}. Move the booking first.`;
+    }
+    const h = await findHold();
+    if (h) {
+      const hEnd = new Date(h.returnDate);
+      hEnd.setUTCDate(hEnd.getUTCDate() + 1);
+      if (new Date(h.pickupDate) < bufEnd && bufStart < hEnd) return "Overlaps a live hold. Choose clear dates.";
+    }
+    if (await findBlock()) return "Overlaps an existing blackout block.";
+    if (await findMaint()) return "Overlaps an open maintenance window.";
+    return null;
+  };
+  const outer = await checkClash(
+    () => prisma.booking.findFirst({ where: { caravanId: caravan.id, status: { in: [...BLOCKING_STATUSES] }, pickupDate: { lt: bufEnd }, returnDate: { gte: bufStart } }, select: { reference: true, pickupDate: true, returnDate: true } }),
+    () => prisma.bookingHold.findFirst({ where: { caravanId: caravan.id, expiresAt: { gt: nowTs }, pickupDate: { lt: bufEnd }, returnDate: { gte: bufStart } }, select: { pickupDate: true, returnDate: true } }),
+    () => prisma.availabilityBlock.findFirst({ where: { caravanId: caravan.id, startDate: { lt: bufEnd }, endDate: { gt: bufStart } }, select: { id: true } }),
+    () => prisma.maintenanceRecord.findFirst({ where: { caravanId: caravan.id, done: false, startDate: { lt: bufEnd }, endDate: { gt: bufStart } }, select: { id: true } })
+  );
+  if (outer) {
+    return NextResponse.json({ error: outer }, { status: 409 });
   }
 
   const created = await prisma.$transaction(async (tx) => {
+    const txNow = new Date();
     const late = await tx.booking.findFirst({
       where: {
         caravanId: caravan.id,
         status: { in: [...BLOCKING_STATUSES] },
-        pickupDate: { lt: end },
-        returnDate: { gt: start },
+        pickupDate: { lt: bufEnd },
+        returnDate: { gte: bufStart },
       },
-      select: { reference: true },
+      select: { reference: true, pickupDate: true, returnDate: true },
     });
-    if (late) throw new Error(`CLASH:${late.reference}`);
+    if (late) {
+      const exEnd = new Date(late.returnDate);
+      exEnd.setUTCDate(exEnd.getUTCDate() + 1);
+      if (new Date(late.pickupDate) < bufEnd && bufStart < exEnd) throw new Error(`CLASH:${late.reference}`);
+    }
+    const lateHold = await tx.bookingHold.findFirst({
+      where: { caravanId: caravan.id, expiresAt: { gt: txNow }, pickupDate: { lt: bufEnd }, returnDate: { gte: bufStart } },
+      select: { id: true, pickupDate: true, returnDate: true },
+    });
+    if (lateHold) {
+      const hEnd = new Date(lateHold.returnDate);
+      hEnd.setUTCDate(hEnd.getUTCDate() + 1);
+      if (new Date(lateHold.pickupDate) < bufEnd && bufStart < hEnd) throw new Error("CLASH:live hold");
+    }
+    const lateBlock = await tx.availabilityBlock.findFirst({
+      where: { caravanId: caravan.id, startDate: { lt: bufEnd }, endDate: { gt: bufStart } },
+      select: { id: true },
+    });
+    if (lateBlock) throw new Error("CLASH:blackout block");
+    const lateMaint = await tx.maintenanceRecord.findFirst({
+      where: { caravanId: caravan.id, done: false, startDate: { lt: bufEnd }, endDate: { gt: bufStart } },
+      select: { id: true },
+    });
+    if (lateMaint) throw new Error("CLASH:maintenance window");
     return tx.availabilityBlock.create({
       data: { caravanId: caravan.id, startDate: start, endDate: end, reason: body.reason },
     });

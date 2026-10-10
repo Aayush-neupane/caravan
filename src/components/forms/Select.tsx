@@ -41,6 +41,13 @@ export function Select({
     setActive(Math.max(0, options.findIndex((o) => o.value === value)));
   }, [value, options]);
 
+  // Keep the active option in view when stepping with the keyboard.
+  useEffect(() => {
+    if (!open) return;
+    const el = document.getElementById(`${btnId}-opt-${active}`);
+    el?.scrollIntoView({ block: "nearest" });
+  }, [open, active, btnId]);
+
   function choose(v: string) {
     onChange(v);
     setOpen(false);
@@ -93,8 +100,7 @@ export function Select({
             animate={{ opacity: 1, y: 0 }}
             exit={reduce ? { opacity: 0 } : { opacity: 0, y: -4 }}
             transition={{ duration: 0.14 }}
-            className="absolute left-0 right-0 top-full z-50 mt-1 max-h-64 overflow-auto border border-border bg-white py-1 shadow-[0_8px_30px_rgba(26,43,35,0.14)]"
-            style={{ borderRadius: 8 }}
+            className="absolute left-0 right-0 top-full z-50 mt-1 max-h-64 overflow-auto border border-border bg-white py-1 shadow-[0_8px_30px_rgba(26,43,35,0.14)] rounded-lg"
           >
             {options.map((o, i) => {
               const selected = o.value === value;
@@ -104,7 +110,9 @@ export function Select({
                   id={`${btnId}-opt-${i}`}
                   role="option"
                   aria-selected={selected}
+                  tabIndex={-1}
                   onClick={() => choose(o.value)}
+                  onKeyDown={onKey}
                   onMouseEnter={() => setActive(i)}
                   className={`flex cursor-pointer items-center justify-between gap-2 px-3 py-2 text-[0.9rem] ${
                     i === active ? "bg-sand/70" : ""

@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { animate, motion, useMotionValue, useMotionValueEvent, type MotionValue } from "framer-motion";
+import { animate, motion, useMotionValue, useMotionValueEvent, useReducedMotion, type MotionValue } from "framer-motion";
 
-const SAND = "#EDE6D6";
+// Palette from design tokens (tokens.css) with hex fallbacks for SVG paint.
+const SAND = "var(--sand,#EDE6D6)";
 const INK = "#0C1712";
-const FOREST = "#1A2B23";
-const AMBER = "#C9A86A";
+const FOREST = "var(--forest,#1A2B23)";
+const AMBER = "var(--amber,#C9A86A)";
+const WHITE = "var(--white,#ffffff)";
 
 // Pocket-size outfit: car leads right, caravan trails. Wheels spin in place
 // about their hubs via native SVG rotation (never orbit).
@@ -73,13 +75,13 @@ export function MiniOutfit({ spin, flag = false }: { spin?: MotionValue<number>;
 
 // Proper little road: dark band, dashes, grass ticks.
 export function RoadStrip({ dark = false }: { dark?: boolean }) {
-  const band = dark ? "#0C1712" : "#1A2B23";
+  const band = dark ? INK : FOREST;
   return (
     <svg viewBox="0 0 600 44" preserveAspectRatio="none" className="h-11 w-full" aria-hidden="true">
       <rect x={0} y={14} width={600} height={16} fill={band} opacity={dark ? 1 : 0.92} />
-      <line x1={0} y1={14} x2={600} y2={14} stroke={dark ? "#EDE6D6" : "#1A2B23"} strokeOpacity={0.6} strokeWidth={2} />
-      <line x1={0} y1={22} x2={600} y2={22} stroke="#EDE6D6" strokeOpacity={0.85} strokeWidth={2} strokeDasharray="18 14" />
-      <g stroke={dark ? "#EDE6D6" : "#1A2B23"} strokeOpacity={0.35} strokeWidth={2} strokeLinecap="round">
+      <line x1={0} y1={14} x2={600} y2={14} stroke={SAND} strokeOpacity={0.6} strokeWidth={2} />
+      <line x1={0} y1={22} x2={600} y2={22} stroke={SAND} strokeOpacity={0.85} strokeWidth={2} strokeDasharray="18 14" />
+      <g stroke={SAND} strokeOpacity={0.35} strokeWidth={2} strokeLinecap="round">
         <path d="M40,42 l0,-6 M70,42 l-3,-5 M530,42 l0,-6 M560,42 l3,-5" />
       </g>
     </svg>
@@ -89,10 +91,15 @@ export function RoadStrip({ dark = false }: { dark?: boolean }) {
 // Booking stepper: the outfit drives to the current step.
 export function RouteProgress({ step, labels }: { step: number; labels: string[] }) {
   const n = labels.length;
+  const reduce = useReducedMotion();
   const angle = useMotionValue(step * 360);
   const at = (i: number) => `${10 + (i * 80) / Math.max(1, n - 1)}%`;
 
   useEffect(() => {
+    if (reduce) {
+      angle.set(step * 360);
+      return;
+    }
     const controls = animate(angle, step * 360 + 360, {
       duration: 0.7,
       ease: [0.22, 1, 0.36, 1],
@@ -100,7 +107,7 @@ export function RouteProgress({ step, labels }: { step: number; labels: string[]
     });
     return () => controls.stop();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step]);
+  }, [step, reduce]);
 
   return (
     <div>
@@ -112,12 +119,12 @@ export function RouteProgress({ step, labels }: { step: number; labels: string[]
               <span
                 key={i}
                 className={`absolute top-1/2 flex h-4 w-4 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 bg-white ${
-                  i < step ? "!border-forest !bg-forest" : i === step ? "!border-forest !bg-amber" : "!border-forest/40"
+                  i < step ? "border-forest bg-forest" : i === step ? "border-forest bg-amber" : "border-forest/40"
                 }`}
                 style={{ left: at(i) }}
               >
                 {i < step && (
-                  <svg width={9} height={9} viewBox="0 0 10 10"><path d="M2 5.2l2.2 2.2L8 3.2" fill="none" stroke="#fff" strokeWidth={1.8} strokeLinecap="round" /></svg>
+                  <svg width={9} height={9} viewBox="0 0 10 10"><path d="M2 5.2l2.2 2.2L8 3.2" fill="none" stroke={WHITE} strokeWidth={1.8} strokeLinecap="round" /></svg>
                 )}
               </span>
             ))}
@@ -133,15 +140,14 @@ export function RouteProgress({ step, labels }: { step: number; labels: string[]
           <MiniOutfit spin={angle} />
         </motion.div>
       </div>
-      <ol className="grid gap-2" style={{ gridTemplateColumns: `repeat(${n}, 1fr)` }} aria-label="Booking progress">
+      <ol className="grid grid-cols-3 gap-1 text-[0.7rem] sm:gap-2 sm:text-[0.78rem]" style={{ gridTemplateColumns: `repeat(${n}, 1fr)` }} aria-label="Booking progress">
         {labels.map((s, i) => (
           <li
             key={s}
             aria-current={i === step ? "step" : undefined}
-            className={`border px-2 py-2 text-center text-[0.78rem] font-semibold transition-colors ${
+            className={`rounded-md border px-2 py-2 text-center font-semibold transition-colors ${
               i === step ? "border-forest bg-forest text-white" : i < step ? "border-forest/40 bg-white text-forest" : "border-border bg-white text-muted"
             }`}
-            style={{ borderRadius: 8 }}
           >
             {s}
           </li>

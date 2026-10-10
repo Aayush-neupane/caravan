@@ -15,6 +15,20 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+/* Guidelines: touch + tap highlight intentional, no double-tap delay */
+button,
+a {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(26, 43, 35, 0.18);
+}
+
+/* Price/figure columns compare cleanly */
+.tnum,
+.field-input,
+.font-mono {
+  font-variant-numeric: tabular-nums;
+}
+
 ::selection {
   background: var(--forest);
   color: #fff;
@@ -42,6 +56,10 @@ body {
   color: var(--muted);
   font-weight: 600;
 }
+/* Light-background kickers on dark panels — passes contrast without `!` overrides */
+.tick-label-light {
+  color: rgba(237, 230, 214, 0.85);
+}
 
 /* Form controls share one quiet geometry */
 .field-input {
@@ -55,8 +73,8 @@ body {
 }
 .field-input:focus {
   border-color: var(--forest);
-  outline: 2px solid rgba(26, 43, 35, 0.18);
-  outline-offset: 0;
+  outline: 2px solid var(--forest);
+  outline-offset: 2px;
 }
 .field-label {
   display: block;
@@ -110,6 +128,50 @@ body {
   border-color: var(--forest);
 }
 
+/* Solid variants so pages never need `!` overrides */
+.btn-amber {
+  background: var(--amber);
+  color: var(--forest);
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-size: 0.95rem;
+  padding: 0.8rem 1.4rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 1px solid var(--amber);
+}
+.btn-amber:hover {
+  background: #fff;
+  border-color: var(--amber);
+}
+.btn-ghost-dark {
+  background: transparent;
+  color: var(--paper);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-size: 0.95rem;
+  padding: 0.8rem 1.4rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+.btn-ghost-dark:hover {
+  border-color: #fff;
+}
+
+/* Trivial reveal replacement for framer-motion where no choreography is needed */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-up {
+  animation: fade-up 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 .table-quiet {
   width: 100%;
   border-collapse: collapse;
@@ -142,6 +204,7 @@ body {
   inset: 0;
   z-index: 1;
   pointer-events: none;
+  contain: paint;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.07'/%3E%3C/svg%3E");
 }
 
@@ -179,12 +242,13 @@ body {
 .vf-bl { bottom: 10px; left: 10px; border-bottom-width: 2px; border-left-width: 2px; }
 .vf-br { bottom: 10px; right: 10px; border-bottom-width: 2px; border-right-width: 2px; }
 
-/* Accent mono kicker in Aayush's eyebrow style */
+/* Accent mono kicker in Aayush's eyebrow style — darkened for 4.5:1 on paper */
 .tick-accent {
   font-size: 0.72rem;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: #a9884e;
+  color: var(--amber-ink, #7a5f2e);
+  font-family: var(--font-mono);
   font-weight: 800;
 }
 

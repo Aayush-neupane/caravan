@@ -19,7 +19,7 @@ export default async function BookingPage({ searchParams }: { searchParams: Reco
         <h1 className="mt-2 font-display text-5xl text-charcoal">Your booking, in three steps.</h1>
         {caravans.length === 0 ? (
           <p className="mt-6 max-w-md leading-relaxed text-muted" role="status">
-            No caravans are currently available to book. Please call the depot on +44 1225 555 014.
+            No caravans are currently available to book. Please call the depot on +61 3 9123 4567.
           </p>
         ) : (
           <BookingFlow initial={searchParams} caravans={caravans} />

@@ -25,13 +25,21 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   return {
     title: `${c.name} — ${c.tagline}`,
     description: c.description.slice(0, 155),
-    openGraph: { title: `${c.name} · Hartley & Moor`, description: c.tagline, type: "article" },
+    openGraph: { title: `${c.name} · Wattle & Wander`, description: c.tagline, type: "article" },
   };
 }
 
 export default async function CaravanDetail({ params, searchParams }: { params: { slug: string }; searchParams: Record<string, string | undefined> }) {
   const c = await findCaravan(params.slug);
-  if (!c) notFound();
+  if (!c) return notFound();
+
+  // Gallery remainder after the two hero frames; the floorplan card joins
+  // the same row.
+  const rest = c.images.slice(3);
+  // Excess mileage and per-caravan extras come from the live record when the
+  // catalogue layer supplies them, otherwise from the shared catalogue.
+  const excessMileagePencePerMile = c.excessMileagePencePerMile ?? 35;
+  const extras = c.extras?.length ? c.extras : EXTRAS.slice(0, 5);
 
   return (
     <div className="bg-paper">
@@ -54,15 +62,17 @@ export default async function CaravanDetail({ params, searchParams }: { params: 
         <div className="mt-8">
           <Lightbox images={c.images} name={c.name} />
         </div>
-        <div className="mt-4 grid gap-4 sm:grid-cols-3">
-          {c.images.slice(3).map((im) => (
+        {/* Gallery remainder: fewer than three images would leave an orphan
+            column, so the row drops to two columns instead. */}
+        <div className={`mt-4 grid gap-4 ${rest.length + 1 >= 3 ? "sm:grid-cols-3" : rest.length + 1 === 2 ? "grid-cols-2" : ""}`}>
+          {rest.map((im) => (
             <figure key={im.url}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={im.url.replace("w=1600", "w=800")} alt={im.alt} className="aspect-[4/3] w-full object-cover" style={{ borderRadius: 8 }} loading="lazy" />
+              <img src={im.url.replace("w=1600", "w=800")} alt={im.alt} className="aspect-[4/3] w-full rounded-lg object-cover" loading="lazy" />
               <figcaption className="mt-1.5 text-[0.78rem] text-muted">{im.kind} · {im.alt.slice(0, 60)}</figcaption>
             </figure>
           ))}
-          <div className="border border-border bg-white p-5" style={{ borderRadius: 8 }}>
+          <div className="rounded-lg border border-border bg-white p-5">
             <p className="tick-label">Floorplan</p>
             <p className="mt-2 text-[0.9rem] leading-relaxed text-charcoal/85">{c.floorplanNotes}</p>
             <p className="mt-3 border-t border-border pt-3 text-[0.82rem] text-muted">Scaled floorplan illustration supplied at handover and in the collection pack. Dimensions verified against manufacturer plate.</p>
@@ -82,18 +92,18 @@ export default async function CaravanDetail({ params, searchParams }: { params: 
                 <tr><td className="font-semibold">Kitchen</td><td>{c.kitchen}</td></tr>
                 <tr><td className="font-semibold">Washroom</td><td>{c.shower ? "Separate shower, cassette toilet, hot water" : "Cassette toilet, hot water"}</td></tr>
                 <tr><td className="font-semibold">Heating</td><td>{c.heating ? "Blown-air gas + electric, thermostat" : "—"}</td></tr>
-                <tr><td className="font-semibold">Mileage</td><td>{c.mileagePerNight} miles/night included · excess {gbp(35)}/mile</td></tr>
+                <tr><td className="font-semibold">Mileage</td><td>{c.mileagePerNight} miles/night included · excess {gbp(excessMileagePencePerMile)}/mile</td></tr>
                 <tr><td className="font-semibold">Towing</td><td>{c.towRequirement}</td></tr>
                 <tr><td className="font-semibold">Pickup</td><td>{c.location} · Mon–Sat 09:00–16:00</td></tr>
               </tbody>
             </table>
             <h3 className="mt-8 font-semibold text-charcoal">Included equipment</h3>
             <ul className="mt-3 grid gap-2 text-[0.93rem] text-charcoal/85 sm:grid-cols-2">
-              {c.equipment.map((e) => <li key={e} className="border border-border bg-white px-3 py-2" style={{ borderRadius: 6 }}>✓ {e}</li>)}
+              {c.equipment.map((e) => <li key={e} className="rounded-md border border-border bg-white px-3 py-2">✓ {e}</li>)}
             </ul>
             <h3 className="mt-8 font-semibold text-charcoal">Optional extras</h3>
             <ul className="mt-3 divide-y divide-border border-y border-border">
-              {EXTRAS.slice(0, 5).map((e) => (
+              {extras.map((e) => (
                 <li key={e.slug} className="flex items-center justify-between gap-4 py-3">
                   <div><p className="font-medium text-charcoal">{e.name}</p><p className="text-[0.85rem] text-muted">{e.description}</p></div>
                   <p className="whitespace-nowrap text-[0.9rem] font-semibold text-forest">{gbp(e.pricePence)}</p>
@@ -121,7 +131,7 @@ export default async function CaravanDetail({ params, searchParams }: { params: 
 
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
         "@context": "https://schema.org", "@type": "Product", name: `${c.name} — caravan hire`,
-        description: c.tagline, offers: { "@type": "Offer", priceCurrency: "GBP", price: (c.baseNightlyPence/100).toFixed(2), availability: "https://schema.org/InStock" },
+        description: c.tagline, offers: { "@type": "Offer", priceCurrency: "AUD", price: (c.baseNightlyPence/100).toFixed(2), availability: "https://schema.org/InStock" },
       }) }} />
     </div>
   );

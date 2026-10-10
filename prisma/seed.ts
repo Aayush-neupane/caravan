@@ -1,5 +1,5 @@
 // Seed: three demo caravans + operational scenarios.
-// Run: npx prisma db push && npm run seed
+// Run: npx prisma migrate deploy && npm run seed
 // Safe to re-run (upserts by slug/code). Clearly labelled demo data.
 // REFUSES production unless explicitly allowed — demo bookings, payments and
 // credentials must never pollute live reports.
@@ -9,42 +9,55 @@ if (process.env.NODE_ENV === "production" && process.env.ALLOW_SEED !== "true") 
 }
 
 import { PrismaClient } from "@prisma/client";
+import { priceQuote } from "@/features/pricing/engine";
+import { getPricingRules } from "@/features/pricing/rules";
 
 const prisma = new PrismaClient();
 
 const IMG = {
   rowan: [
-    ["https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?auto=format&fit=crop&w=1600&q=70", "The Rowan caravan parked beside a pine forest at dawn", "exterior"],
-    ["https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?auto=format&fit=crop&w=1600&q=70", "Awning and camp chairs outside the caravan in soft evening light", "exterior"],
-    ["https://images.unsplash.com/photo-1510312305653-8ed496efae75?auto=format&fit=crop&w=1600&q=70", "Compact caravan interior with timber finishes and made-up double bed", "sleeping"],
-    ["https://images.unsplash.com/photo-1556911220-bff31c812dba?auto=format&fit=crop&w=1600&q=70", "Fitted caravan kitchen with hob and preparation space", "kitchen"],
+    ["https://images.pexels.com/photos/31995029/pexels-photo-31995029.jpeg?auto=compress&cs=tinysrgb&w=1600", "The Rowan set up at a bush campsite among the trees", "exterior"],
+    ["https://images.pexels.com/photos/7163681/pexels-photo-7163681.jpeg?auto=compress&cs=tinysrgb&w=1600", "Annexe awning set up beside the caravan at camp", "exterior"],
+    ["https://images.pexels.com/photos/26976127/pexels-photo-26976127.jpeg?auto=compress&cs=tinysrgb&w=1600", "Double bed in soft daylight with privacy curtains", "sleeping"],
+    ["https://images.pexels.com/photos/7476238/pexels-photo-7476238.jpeg?auto=compress&cs=tinysrgb&w=1600", "Galley kitchen being used to cook a meal", "kitchen"],
   ],
   alder: [
-    ["https://images.unsplash.com/photo-1516937941344-00b4e0337589?auto=format&fit=crop&w=1600&q=70", "The Alder caravan on open moorland under a wide sky", "exterior"],
-    ["https://images.unsplash.com/photo-1496545672447-f699b503d270?auto=format&fit=crop&w=1600&q=70", "Alder lounge with wool throws and oak table in morning light", "living"],
-    ["https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1600&q=70", "Fixed island bed with linen and reading lights", "sleeping"],
-    ["https://images.unsplash.com/photo-1484154218962-a197022b5858?auto=format&fit=crop&w=1600&q=70", "Kitchen and dining area with natural materials", "kitchen"],
+    ["https://images.pexels.com/photos/3927311/pexels-photo-3927311.jpeg?auto=compress&cs=tinysrgb&w=1600", "The Alder, a modern touring caravan pitched at camp", "exterior"],
+    ["https://images.pexels.com/photos/18797772/pexels-photo-18797772.jpeg?auto=compress&cs=tinysrgb&w=1600", "Lounge with timber furniture in morning light", "living"],
+    ["https://images.unsplash.com/photo-1683582160988-5809b4886adc?auto=format&fit=crop&w=1600&q=70", "Fixed bed with linen and reading lights", "sleeping"],
+    ["https://images.pexels.com/photos/7163683/pexels-photo-7163683.jpeg?auto=compress&cs=tinysrgb&w=1600", "Kitchenette and dining area with modern amenities", "kitchen"],
   ],
   solace: [
-    ["https://images.unsplash.com/photo-1504851149312-7a075b496cc7?auto=format&fit=crop&w=1600&q=70", "The Solace family caravan beside a lake at golden hour", "exterior"],
-    ["https://images.unsplash.com/photo-1537225228614-56cc3556d7ed?auto=format&fit=crop&w=1600&q=70", "Family lounge with bunk area beyond", "living"],
-    ["https://images.unsplash.com/photo-1519710164239-da123dc03ef4?auto=format&fit=crop&w=1600&q=70", "Dining area set for breakfast", "living"],
-    ["https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&w=1600&q=70", "Fixed bunks with individual reading lights", "sleeping"],
+    ["https://images.pexels.com/photos/34160300/pexels-photo-34160300.jpeg?auto=compress&cs=tinysrgb&w=1600", "The Solace by the water at golden hour", "exterior"],
+    ["https://images.pexels.com/photos/6187662/pexels-photo-6187662.jpeg?auto=compress&cs=tinysrgb&w=1600", "Family lounge inside the caravan", "living"],
+    ["https://images.pexels.com/photos/6187663/pexels-photo-6187663.jpeg?auto=compress&cs=tinysrgb&w=1600", "Family caravan pitched at a green campsite", "exterior"],
+    ["https://images.pexels.com/photos/19001462/pexels-photo-19001462.jpeg?auto=compress&cs=tinysrgb&w=1600", "Sleeping area with a view out to the water", "sleeping"],
   ],
 } as const;
 
 function days(n: number): Date {
-  const d = new Date();
-  d.setDate(d.getDate() + n);
-  d.setUTCHours(12, 0, 0, 0);
-  return d;
+  // UTC-noon anchor so the day is identical in every deployment timezone
+  // and the ISO date handed to the pricing engine matches the stored one.
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + n, 12, 0, 0));
 }
+
+const iso = (d: Date): string => d.toISOString().slice(0, 10);
+
+type VanRates = {
+  id: string;
+  baseNightlyPence: number;
+  weekendNightlyPence: number | null;
+  weeklyDiscountPct: number;
+  cleaningFeePence: number;
+  securityDepositPence: number;
+};
 
 async function main() {
   const location = await prisma.location.upsert({
     where: { id: "loc-lansdown" },
     update: {},
-    create: { id: "loc-lansdown", name: "Bath — Lansdown Depot", address: "Charlcombe Lane, Bath BA1 9BT", pickupNotes: "Mon–Sat 09:00–16:00. Arrive 15 minutes early." },
+    create: { id: "loc-lansdown", name: "Melbourne — Brunswick Depot", address: "123 Sydney Rd, Brunswick VIC 3056", pickupNotes: "Mon–Sat 09:00–16:00. Arrive 15 minutes early." },
   });
 
   for (const [name, slug, desc] of [
@@ -100,7 +113,7 @@ async function main() {
     ["Outdoor furniture", "outdoor-furniture", "Chairs, table and windbreak.", 2000, "per_rental"],
     ["Air awning", "awning", "Drive-away air awning fitted at collection.", 4500, "per_rental"],
     ["Bike rack + hire", "bike-rack", "Tow-bar rack for two bikes.", 3000, "per_rental"],
-    ["Extra mileage (250 mi)", "extra-mileage", "Additional 250 miles added to your allowance.", 5500, "per_item"],
+    ["Extra kilometres (400 km)", "extra-mileage", "Additional 400 km added to your allowance.", 5500, "per_item"],
     ["Early collection", "early-pickup", "Collect from 09:00 with full handover.", 3500, "per_rental"],
   ];
   for (const [name, slug, desc, price, unit] of extras) {
@@ -120,42 +133,90 @@ async function main() {
   await prisma.voucher.upsert({ where: { code: "GIFT-250" }, update: {}, create: { code: "GIFT-250", balancePence: 25000, initialPence: 25000 } });
 
   // Users
-  await prisma.user.upsert({ where: { email: "owner@hartleyandmoor.example" }, update: {}, create: { email: "owner@hartleyandmoor.example", name: "M. Hartley", role: "owner" } });
+  await prisma.user.upsert({ where: { email: "owner@wattleandwander.com.au" }, update: {}, create: { email: "owner@wattleandwander.com.au", name: "M. Wattle", role: "owner" } });
   const custUser = await prisma.user.upsert({ where: { email: "customer@example.com" }, update: {}, create: { email: "customer@example.com", name: "Demo Traveller", role: "customer" } });
-  await prisma.customerProfile.upsert({ where: { userId: custUser.id }, update: {}, create: { userId: custUser.id, phone: "+44 7700 900000" } });
+  await prisma.customerProfile.upsert({ where: { userId: custUser.id }, update: {}, create: { userId: custUser.id, phone: "+61 4 0000 0000" } });
 
   // Operational scenarios
   const rowan = await prisma.caravan.findUniqueOrThrow({ where: { slug: "the-rowan" } });
   const alder = await prisma.caravan.findUniqueOrThrow({ where: { slug: "the-alder" } });
   const solace = await prisma.caravan.findUniqueOrThrow({ where: { slug: "the-solace" } });
-  const bedding = await prisma.extra.findUniqueOrThrow({ where: { slug: "bedding-pack" } });
 
-  async function mkBooking(ref: string, vanId: string, pick: Date, ret: Date, status: string, total: number, guestEmail = "customer@example.com") {
+  async function mkBooking(
+    ref: string,
+    van: VanRates,
+    pick: Date,
+    ret: Date,
+    status: string,
+    guestEmail = "customer@example.com",
+    extras: { slug: string; qty: number }[] = []
+  ) {
     await prisma.booking.deleteMany({ where: { reference: ref } });
-    return prisma.booking.create({
+    // Money comes from the same pricing engine the checkout uses, with the
+    // van's own live rates, so the seeded components always sum to the total
+    // (and the security deposit matches the van's configured value).
+    const [rules, extraRows] = await Promise.all([
+      getPricingRules(),
+      Promise.all(extras.map(async (x) => ({ qty: x.qty, extra: await prisma.extra.findUniqueOrThrow({ where: { slug: x.slug } }) }))),
+    ]);
+    const quote = priceQuote({
+      baseNightlyPence: van.baseNightlyPence,
+      weekendNightlyPence: van.weekendNightlyPence ?? undefined,
+      weeklyDiscountPct: van.weeklyDiscountPct,
+      pickupISO: iso(pick),
+      returnISO: iso(ret),
+      cleaningFeePence: van.cleaningFeePence,
+      extras: extraRows.map((x) => ({ unitPricePence: x.extra.pricePence, qty: x.qty, perNight: x.extra.unit === "per_night" })),
+      taxPct: 10,
+      securityDepositPence: van.securityDepositPence,
+      depositPct: 25,
+    }, null, rules.seasonal);
+    const created = await prisma.booking.create({
       data: {
-        reference: ref, caravanId: vanId, guestName: "Demo Traveller", guestEmail, guestPhone: "+44 7700 900000",
+        reference: ref, caravanId: van.id, guestName: "Demo Traveller", guestEmail, guestPhone: "+61 4 0000 0000",
         pickupDate: pick, returnDate: ret, travellers: 2, status,
-        subtotalPence: Math.round(total * 0.7), feesPence: 8500, extrasPence: 0, taxPence: Math.round(total * 0.2), totalPence: total,
-        depositDuePence: Math.round(total * 0.25), securityDepositPence: 65000, currency: "GBP",
-        quoteSnapshot: JSON.stringify({ totalPence: total, demo: true, note: "Seeded immutable snapshot" }),
+        subtotalPence: quote.rentalSubtotalPence,
+        discountPence: quote.weeklyDiscountPence,
+        feesPence: quote.feesPence,
+        extrasPence: quote.extrasPence,
+        taxPence: quote.taxPence,
+        totalPence: quote.totalPence,
+        depositDuePence: quote.depositDuePence,
+        securityDepositPence: van.securityDepositPence,
+        currency: "AUD",
+        quoteSnapshot: JSON.stringify({ ...quote, caravanId: van.id, demo: true, note: "Seeded immutable snapshot" }),
         statusHistory: { create: [{ from: null, to: status, actor: "seed", note: "Demonstration record" }] },
       },
     });
+    for (const x of extraRows) {
+      await prisma.bookingExtraItem.create({
+        data: {
+          bookingId: created.id, extraId: x.extra.id, qty: x.qty,
+          unitPricePence: x.extra.pricePence,
+          totalPence: x.extra.pricePence * x.qty * (x.extra.unit === "per_night" ? quote.nights : 1),
+        },
+      });
+    }
+    return created;
   }
 
   // 1. Available caravan (Rowan has only a distant booking) / 2. Unavailable range (Alder booked days 20–26)
-  await mkBooking("HM-DEMO01", alder.id, days(20), days(26), "confirmed", 87000);
+  await mkBooking("WW-DEMO01", alder, days(20), days(26), "confirmed");
   // 3. Expiring hold on Solace
   await prisma.bookingHold.deleteMany({ where: { token: "hold_demo_expiring" } });
   await prisma.bookingHold.create({ data: { caravanId: solace.id, pickupDate: days(30), returnDate: days(34), token: "hold_demo_expiring", expiresAt: new Date(Date.now() + 20 * 60 * 1000) } });
   // 4/6/7. Online reservation awaiting the depot counter (held) + extras + logged licence
-  const b4 = await mkBooking("HM-DEMO02", solace.id, days(40), days(47), "held", 132000);
+  const b4 = await mkBooking("WW-DEMO02", solace, days(40), days(47), "held", "customer@example.com", [{ slug: "bedding-pack", qty: 4 }]);
+  // Demo only: a real online reservation holds for 20 minutes. This scenario
+  // stands for a reservation the guest is already at the counter about to
+  // settle, so it keeps a long hold — otherwise the hold-expiry sweep would
+  // retire the demo booking (and free its dates) half an hour after seeding.
+  await prisma.bookingHold.deleteMany({ where: { bookingId: b4.id } });
+  await prisma.bookingHold.create({ data: { caravanId: solace.id, pickupDate: days(40), returnDate: days(47), token: "hold_demo_counter", bookingId: b4.id, expiresAt: new Date(Date.now() + 12 * 60 * 60 * 1000) } });
   await prisma.bookingExtraItem.deleteMany({ where: { bookingId: b4.id } });
-  await prisma.bookingExtraItem.create({ data: { bookingId: b4.id, extraId: bedding.id, qty: 4, unitPricePence: 3500, totalPence: 14000 } });
   await prisma.payment.deleteMany({ where: { bookingId: b4.id } });
   // 5. Declined at the counter (documents insufficient)
-  const b5 = await mkBooking("HM-DEMO03", rowan.id, days(50), days(53), "cancelled", 34200);
+  const b5 = await mkBooking("WW-DEMO03", rowan, days(50), days(53), "cancelled");
   await prisma.booking.update({ where: { id: b5.id }, data: { cancelReason: "Declined at counter — licence entitlement insufficient (demo)" } });
   await prisma.payment.deleteMany({ where: { bookingId: b5.id } });
   // 8. Maintenance conflict guard (Alder service overlapping nothing, plus one flagged near booking)
@@ -165,24 +226,24 @@ async function main() {
   await prisma.customerDocument.deleteMany({ where: { bookingId: b4.id } });
   await prisma.customerDocument.create({ data: { bookingId: b4.id, kind: "driving_licence", fileName: "Physical copy seen at counter", fileUrl: "counter://physical", status: "approved", reviewerNote: "Original seen, in date (demo)" } });
   // 10/11. Cancelled + refund
-  const b10 = await mkBooking("HM-DEMO04", rowan.id, days(-30), days(-27), "cancelled", 34200);
+  const b10 = await mkBooking("WW-DEMO04", rowan, days(-30), days(-27), "cancelled");
   await prisma.refund.deleteMany({ where: { bookingId: b10.id } });
-  await prisma.refund.create({ data: { bookingId: b10.id, amountPence: 34200, reason: "Cancelled 30+ days before collection — full refund per policy v2026.1", actor: "seed", status: "recorded" } });
+  await prisma.refund.create({ data: { bookingId: b10.id, amountPence: b10.totalPence, reason: "Cancelled 30+ days before collection — full refund per policy v2026.1", actor: "seed", status: "recorded" } });
   // 12. Manual booking by admin (confirmed, Rowan)
-  await mkBooking("HM-DEMO05", rowan.id, days(90), days(95), "confirmed", 57000, "walk-in@example.com");
+  await mkBooking("WW-DEMO05", rowan, days(90), days(95), "confirmed", "walk-in@example.com");
   // 13. Concurrent-attempt pair is exercised in tests, not seeded as a clash.
   // 14. Pricing-change stability: b4 snapshot stays fixed even if base rates change.
 
   // Content + FAQs + reviews
-  await prisma.destination.upsert({ where: { slug: "cotswold-lanes" }, update: {}, create: { name: "Cotswold Lanes", slug: "cotswold-lanes", intro: "Honey-stone villages and quiet escarpment lanes.", duration: "4–6 nights", season: "April to October", heroImage: "https://images.unsplash.com/photo-1467269204594-9661b134dd2b?auto=format&fit=crop&w=1800&q=70", stops: JSON.stringify([{ name: "Bath → Castle Combe" }]), practical: "Narrow lanes reward slow towing.", distanceMi: 180 } });
-  await prisma.destination.upsert({ where: { slug: "pembrokeshire-coast" }, update: {}, create: { name: "Pembrokeshire Coast", slug: "pembrokeshire-coast", intro: "Cliff paths and Atlantic light.", duration: "6–8 nights", season: "May to September", heroImage: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1800&q=70", stops: JSON.stringify([{ name: "Bath → St Davids" }]), practical: "Exposed pitches — windbreak advised.", distanceMi: 420 } });
-  await prisma.destination.upsert({ where: { slug: "brecon-dark-skies" }, update: {}, create: { name: "Brecon Dark Skies", slug: "brecon-dark-skies", intro: "Reservoirs, waterfalls and a protected night sky.", duration: "3–5 nights", season: "September to March", heroImage: "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=1800&q=70", stops: JSON.stringify([{ name: "Bath → Abergavenny" }]), practical: "Patchy signal — download offline maps.", distanceMi: 210 } });
+  await prisma.destination.upsert({ where: { slug: "great-ocean-road" }, update: {}, create: { name: "Great Ocean Road", slug: "great-ocean-road", intro: "Limestone stacks and eucalypt gullies.", duration: "4–6 nights", season: "October to April", heroImage: "https://images.unsplash.com/photo-1578233797281-b0fc57765263?auto=format&fit=crop&w=1800&q=70", stops: JSON.stringify([{ name: "Melbourne → Torquay" }]), practical: "Coastal wind rewards slow towing.", distanceMi: 420 } });
+  await prisma.destination.upsert({ where: { slug: "grampians-silo-trail" }, update: {}, create: { name: "Grampians & Silo Trail", slug: "grampians-silo-trail", intro: "Sandstone ranges and painted silos.", duration: "6–8 nights", season: "September to November", heroImage: "https://images.pexels.com/photos/10782073/pexels-photo-10782073.jpeg?auto=compress&cs=tinysrgb&w=1800", stops: JSON.stringify([{ name: "Melbourne → Halls Gap" }]), practical: "Long hot roads — carry water.", distanceMi: 620 } });
+  await prisma.destination.upsert({ where: { slug: "mornington-prom" }, update: {}, create: { name: "Mornington & the Prom", slug: "mornington-prom", intro: "Hot springs, penguins and granite headlands.", duration: "3–5 nights", season: "March to May", heroImage: "https://images.pexels.com/photos/38091997/pexels-photo-38091997.jpeg?auto=compress&cs=tinysrgb&w=1800", stops: JSON.stringify([{ name: "Melbourne → Sorrento" }]), practical: "Patchy signal inside the Prom — download offline maps.", distanceMi: 380 } });
 
   await prisma.faq.deleteMany({});
   for (const [i, [section, q, a]] of [
     ["Booking", "Do I need experience towing?", "No — every hire begins with a 40-minute accompanied handover."],
-    ["Booking", "What is included in the price?", "Nightly rate, VAT, gas, kit and breakdown cover. Cleaning and refundable deposit shown separately."],
-    ["Towing", "What licence do I need?", "Rowan suits most Category B licences; Alder and Solace need a checked combination."],
+    ["Booking", "What is included in the price?", "Nightly rate, GST, gas, kit and roadside cover. Cleaning and refundable deposit shown separately."],
+    ["Towing", "What licence do I need?", "Rowan suits most full car licences; Alder and Solace need a checked combination."],
   ].entries()) {
     await prisma.faq.create({ data: { section, question: q, answer: a, sort: i } });
   }

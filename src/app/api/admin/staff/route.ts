@@ -45,6 +45,7 @@ export async function PATCH(req: Request) {
     prisma.user.update({ where: { id: user.id }, data: { role: body.role } }),
     prisma.auditLog.create({
       data: {
+        actorId: (session.user as { id?: string } | undefined)?.id ?? undefined,
         action: "staff:role", resource: "user", resourceId: user.id,
         detail: `${user.email}: ${user.role} → ${body.role} by ${session.user?.email ?? role}`,
       },

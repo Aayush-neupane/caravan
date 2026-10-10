@@ -63,10 +63,13 @@ function MonthGrid({
   };
 
   return (
-    <div role="grid" aria-label={`${MONTHS[month]} ${year}`}>
-      <div className="grid grid-cols-7 gap-0.5" role="row">
+    // Native button semantics: a plain grid loses meaning when its cells
+    // are not focusable gridcells, so the month is a labelled group of
+    // buttons instead of an ARIA grid.
+    <div role="group" aria-label={`${MONTHS[month]} ${year}`}>
+      <div className="grid grid-cols-7 gap-0.5">
         {WEEKDAYS.map((w) => (
-          <span key={w} className="py-1 text-center text-[0.68rem] font-bold uppercase tracking-wider text-muted" role="columnheader">
+          <span key={w} aria-hidden="true" className="py-1 text-center text-[0.68rem] font-bold uppercase tracking-wider text-muted">
             {w}
           </span>
         ))}
@@ -91,9 +94,7 @@ function MonthGrid({
               ref={(el) => registerDay(iso, el)}
               data-date={iso}
               type="button"
-              role="gridcell"
-              aria-selected={isStart || iso === ret}
-              aria-disabled={disabled || undefined}
+              aria-pressed={isStart || iso === ret}
               aria-label={labelBits}
               disabled={disabled}
               onClick={() => onPick(iso)}
@@ -111,11 +112,10 @@ function MonthGrid({
                 disabled
                   ? "cursor-not-allowed text-charcoal/25 line-through decoration-charcoal/30"
                   : "cursor-pointer text-charcoal hover:bg-sand",
-                isStart || isEnd ? "!bg-forest font-bold !text-white hover:!bg-forest" : "",
+                isStart || isEnd ? "rounded-md !bg-forest font-bold !text-white hover:!bg-forest" : "rounded-sm",
                 range ? "bg-forest/10 font-semibold" : "",
                 today && !isStart && !isEnd ? "underline decoration-amber decoration-2 underline-offset-4" : "",
               ].join(" ")}
-              style={{ borderRadius: isStart || isEnd ? 6 : 3 }}
             >
               {parseISODate(iso).getUTCDate()}
             </button>
@@ -147,6 +147,7 @@ export function DateRangeField({
 }) {
   const [open, setOpen] = useState(false);
   const [blocked, setBlocked] = useState<BlockedSet>(new Set());
+  const [calError, setCalError] = useState<string | null>(null);
   const [hover, setHover] = useState<string | null>(null);
   const [localPickup, setLocalPickup] = useState<string | null>(pickup || null);
   const [localRet, setLocalRet] = useState<string | null>(ret || null);
@@ -166,10 +167,14 @@ export function DateRangeField({
   useEffect(() => {
     if (!open || !slug) return;
     let live = true;
+    setCalError(null);
     fetch(`/api/calendar?slug=${slug}`)
-      .then((r) => (r.ok ? r.json() : null))
+      .then((r) => {
+        if (!r.ok) throw new Error(`calendar ${r.status}`);
+        return r.json();
+      })
       .then((j) => { if (live && j?.nights) setBlocked(new Set(j.nights as string[])); })
-      .catch(() => {});
+      .catch(() => { if (live) setCalError("Live availability is unavailable — dates will be confirmed at checkout."); });
     return () => { live = false; };
   }, [open, slug]);
 
@@ -265,13 +270,12 @@ export function DateRangeField({
             animate={{ opacity: 1, y: 0 }}
             exit={reduce ? { opacity: 0 } : { opacity: 0, y: -6 }}
             transition={{ duration: 0.16 }}
-            className="absolute left-0 top-full z-50 mt-2 w-[19.5rem] border border-border bg-white p-4 shadow-[0_8px_30px_rgba(26,43,35,0.14)]"
-            style={{ borderRadius: 10 }}
+            className="overscroll-contain absolute left-0 right-0 top-full z-50 mt-2 w-[min(19.5rem,calc(100vw-2rem))] max-w-[calc(100vw-2.5rem)] rounded-lg border border-border bg-white p-4 shadow-[0_8px_30px_rgba(26,43,35,0.14)] sm:left-0 sm:right-auto"
           >
             <div className="mb-3 flex items-center justify-between">
-              <button type="button" onClick={() => stepMonth(-1)} aria-label="Previous month" className="border border-border px-2.5 py-1 text-sm font-bold hover:border-forest" style={{ borderRadius: 6 }}>←</button>
+              <button type="button" onClick={() => stepMonth(-1)} aria-label="Previous month" className="rounded-md border border-border px-2.5 py-1 text-sm font-bold hover:border-forest">←</button>
               <p className="font-display text-lg" aria-live="polite">{MONTHS[view.m]} {view.y}</p>
-              <button type="button" onClick={() => stepMonth(1)} aria-label="Next month" className="border border-border px-2.5 py-1 text-sm font-bold hover:border-forest" style={{ borderRadius: 6 }}>→</button>
+              <button type="button" onClick={() => stepMonth(1)} aria-label="Next month" className="rounded-md border border-border px-2.5 py-1 text-sm font-bold hover:border-forest">→</button>
             </div>
 
             <MonthGrid
@@ -284,14 +288,16 @@ export function DateRangeField({
             />
 
             <div className="mt-3 flex items-center gap-4 border-t border-border pt-3 text-[0.75rem] text-muted">
-              <span className="flex items-center gap-1.5"><i className="inline-block h-2.5 w-2.5 bg-forest" style={{ borderRadius: 2 }} /> Selected</span>
-              <span className="flex items-center gap-1.5"><i className="inline-block h-2.5 w-2.5 bg-forest/10" style={{ borderRadius: 2 }} /> In range</span>
-              <span className="flex items-center gap-1.5"><i className="inline-block h-2.5 w-2.5 bg-charcoal/20 line-through" style={{ borderRadius: 2 }} /> Taken</span>
+              <span className="flex items-center gap-1.5"><i className="inline-block h-2.5 w-2.5 rounded-sm bg-forest" /> Selected</span>
+              <span className="flex items-center gap-1.5"><i className="inline-block h-2.5 w-2.5 rounded-sm bg-forest/10" /> In range</span>
+              <span className="flex items-center gap-1.5"><i className="inline-block h-2.5 w-2.5 rounded-sm bg-charcoal/20 line-through" /> Taken</span>
             </div>
 
             <p className="mt-2 min-h-[1.4em] text-[0.8rem] text-muted" role="status" aria-live="polite">
               {valid ? `${fmtShort(localPickup!)} → ${fmtShort(localRet!)} · ${nights} night${nights > 1 ? "s" : ""}` : "Pick a pickup date, then a return date."}
             </p>
+            {calError && <p className="mt-1 text-[0.78rem] font-medium text-error" role="alert">{calError}</p>}
+            {!slug && <p className="mt-1 text-[0.78rem] text-muted">Date filtering is per-caravan at booking — this list does not hide unavailable vans.</p>}
             <p className="sr-only" role="status">{announce}</p>
 
             <div className="mt-2 flex gap-2">

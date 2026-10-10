@@ -234,3 +234,23 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Ticket printing: only .ticket-print survives — header, nav, buttons and
+   the rest of the page stay out of the printout. */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .ticket-print,
+  .ticket-print * {
+    visibility: visible;
+  }
+  .ticket-print {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    margin: 0;
+    border-width: 1px;
+  }
+}

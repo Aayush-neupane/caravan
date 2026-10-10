@@ -103,11 +103,6 @@ function Convoy({ spin, bob }: { spin?: MotionValue<number>; bob?: MotionValue<n
       <circle cx={30} cy={-45} r={3} fill={AMBER} />
       <circle cx={180} cy={-45} r={3} fill={AMBER} />
       <circle cx={294} cy={-45} r={3} fill={AMBER} />
-      {/* fleet plate */}
-      <rect x={12} y={-56} width={34} height={12} fill={SAND} />
-      <text x={29} y={-47} textAnchor="middle" fontSize={8.5} fontWeight={800} fontFamily="Manrope, sans-serif" fill={FOREST} letterSpacing={0.5}>
-        HM·01
-      </text>
       {/* wheel arches + mudflaps */}
       {arch(80)}
       {arch(240)}
@@ -152,11 +147,8 @@ function Convoy({ spin, bob }: { spin?: MotionValue<number>; bob?: MotionValue<n
       <rect x={618} y={-56} width={8} height={9} fill={AMBER} />
       <rect x={350} y={-52} width={6} height={11} fill={AMBER} opacity={0.85} />
       <rect x={606} y={-30} width={20} height={6} fill={INK} />
-      {/* fleet plate on the tailgate */}
-      <rect x={352} y={-40} width={30} height={10} fill="#F8F7F2" />
-      <text x={367} y={-32.5} textAnchor="middle" fontSize={7.5} fontWeight={800} fontFamily="Manrope, sans-serif" fill={FOREST}>
-        HM·02
-      </text>
+      {/* tailgate trim */}
+      <rect x={352} y={-40} width={30} height={10} fill={SAND} opacity={0.55} />
       {/* headlight beam on the road */}
       <polygon points="626,-50 800,-34 800,-6 626,-38" fill={AMBER} opacity={0.12} />
       {/* wheel-arch flares */}
@@ -287,32 +279,32 @@ export function DriveScene({ progress }: { progress?: MotionValue<number> }) {
       {/* stars */}
       {[
         [90, 46], [210, 96], [350, 40], [490, 76], [630, 34], [750, 86], [880, 40],
-        [1030, 76], [1150, 330], [1270, 90], [1390, 250], [270, 140], [570, 130], [990, 150],
+        [1030, 76], [1150, 330], [1270, 90], [1390, 250], [270, 140], [570, 130], [880, 220],
       ].map(([x, y], i) => (
         <circle key={i} cx={x} cy={y} r={1.7} fill={SAND} opacity={0.45} />
       ))}
       {/* dusk band lifting the horizon */}
       <rect x={0} y={330} width={1440} height={142} fill="#212B22" />
-      {/* sun, high and clear of the church — the outfit tows toward it.
+      {/* sun, low beside the church tower — the outfit tows toward it.
           Large flat amber disc with halo rings + rays for dusk legibility. */}
-      <circle cx={1300} cy={150} r={104} fill="none" stroke={AMBER} strokeOpacity={0.18} strokeWidth={1.5} />
-      <circle cx={1300} cy={150} r={78} fill="none" stroke={AMBER} strokeOpacity={0.35} strokeWidth={1.5} />
+      <circle cx={960} cy={165} r={104} fill="none" stroke={AMBER} strokeOpacity={0.18} strokeWidth={1.5} />
+      <circle cx={960} cy={165} r={78} fill="none" stroke={AMBER} strokeOpacity={0.35} strokeWidth={1.5} />
       <g stroke={AMBER} strokeOpacity={0.7} strokeWidth={3} strokeLinecap="round">
         {Array.from({ length: 12 }).map((_, i) => {
           const a = (i * Math.PI) / 6;
-          const x1 = 1300 + Math.cos(a) * 72;
-          const y1 = 150 + Math.sin(a) * 72;
-          const x2 = 1300 + Math.cos(a) * 88;
-          const y2 = 150 + Math.sin(a) * 88;
+          const x1 = 960 + Math.cos(a) * 72;
+          const y1 = 165 + Math.sin(a) * 72;
+          const x2 = 960 + Math.cos(a) * 88;
+          const y2 = 165 + Math.sin(a) * 88;
           return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} />;
         })}
       </g>
-      <circle cx={1300} cy={150} r={58} fill={AMBER} />
-      <circle cx={1300} cy={150} r={58} fill="none" stroke={SAND} strokeOpacity={0.5} strokeWidth={2} />
+      <circle cx={960} cy={165} r={58} fill={AMBER} />
+      <circle cx={960} cy={165} r={58} fill="none" stroke={SAND} strokeOpacity={0.5} strokeWidth={2} />
       {/* birds heading home, same direction as the outfit */}
       <g stroke={SAND} strokeOpacity={0.6} strokeWidth={2.2} fill="none" strokeLinecap="round">
-        <path d="M920,110 q10,-10 20,0 q10,-10 20,0" />
-        <path d="M992,142 q8,-8 16,0 q8,-8 16,0" />
+        <path d="M1085,115 q10,-10 20,0 q10,-10 20,0" />
+        <path d="M1150,148 q8,-8 16,0 q8,-8 16,0" />
       </g>
 
       {/* far mountains + snowcaps */}
@@ -386,26 +378,25 @@ export function DriveScene({ progress }: { progress?: MotionValue<number> }) {
       <line x1={0} y1={472} x2={1440} y2={472} stroke={SAND} strokeOpacity={0.85} strokeWidth={3} />
       <line x1={0} y1={522} x2={1440} y2={522} stroke={SAND} strokeOpacity={0.8} strokeWidth={3} strokeDasharray="34 26" />
 
-      {/* the hidden line: centred on the road, paper-white for dusk legibility.
-          Painted BEFORE the convoy so the outfit passes OVER it — covered as
-          the van reaches centre, uncovered as the rear bumper clears, then it
-          remains for the rest of the pin. */}
+      {/* the hidden line: centred title card on the road, set in tracked-out
+          uppercase Cormorant like a film intertitle. Painted BEFORE the
+          convoy so the outfit passes OVER it — covered as the van reaches
+          centre, uncovered as the rear bumper clears, then it remains. */}
       <motion.text
         x={720}
-        y={512}
+        y={514}
         textAnchor="middle"
-        fontSize={44}
-        fontStyle="italic"
+        fontSize={56}
         fontFamily="'Cormorant Garamond', Georgia, serif"
-        fontWeight={600}
-        letterSpacing={1}
+        fontWeight={500}
+        letterSpacing={9}
         fill="#FFFFFF"
         stroke="#0C1712"
-        strokeWidth={0.5}
+        strokeWidth={0.6}
         paintOrder="stroke"
         style={{ opacity: phraseOpacity }}
       >
-        Tow out at golden hour.
+        TOW OUT AT GOLDEN HOUR
       </motion.text>
 
       {/* convoy: car leads right, caravan trails left */}

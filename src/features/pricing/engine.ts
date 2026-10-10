@@ -49,6 +49,7 @@ export const QuoteInput = z.object({
 
 export type QuoteInput = z.infer<typeof QuoteInput>;
 
+export type SeasonalRule = { startMonthDay: string; endMonthDay: string; multiplierPct: number };
 export type NightLine = {
   date: string;
   ratePence: number;
@@ -86,8 +87,9 @@ export function isWeekendNight(dateISO: string): boolean {
 
 // Seasonal helper: Jun 15 – Sep 05 = 120%, Dec 20 – Jan 04 = 110%, else 100%.
 // Evaluated per night so season-boundary trips price correctly.
-// Optional `rules` lets callers inject DB SeasonalRate rows; defaults match seed.
-export function seasonalMultiplierFor(dateISO: string, rules?: { startMonthDay: string; endMonthDay: string; multiplierPct: number }[]): number {
+// Optional `rules` lets callers inject live DB SeasonalRate rows (first match
+// wins); defaults match the seed and apply when unseeded.
+export function seasonalMultiplierFor(dateISO: string, rules?: SeasonalRule[]): number {
   if (rules && rules.length > 0) {
     const d = parseISODate(dateISO);
     const md = `${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
@@ -107,16 +109,17 @@ export function seasonalMultiplierFor(dateISO: string, rules?: { startMonthDay: 
   return 100;
 }
 
-export function priceQuote(input: z.input<typeof QuoteInput>, couponCode?: string | null): Quote {
+export function priceQuote(input: z.input<typeof QuoteInput>, couponCode?: string | null, seasonalRules?: SeasonalRule[]): Quote {
   const parsed = QuoteInput.parse(input);
   const nights = nightsBetween(parseISODate(parsed.pickupISO), parseISODate(parsed.returnISO));
   if (nights <= 0) throw new Error("Return date must be after pickup date.");
+  const live = seasonalRules && seasonalRules.length > 0 ? seasonalRules : undefined;
 
   // 1–2. Per-night rate: weekend rule, then that night's own seasonal multiplier.
   const nightLines: NightLine[] = dateRangeNights(parsed.pickupISO, parsed.returnISO).map((date) => {
     const weekend = isWeekendNight(date);
     const basePence = weekend && parsed.weekendNightlyPence ? parsed.weekendNightlyPence : parsed.baseNightlyPence;
-    const seasonalPct = seasonalMultiplierFor(date);
+    const seasonalPct = seasonalMultiplierFor(date, live);
     const ratePence = Math.round((basePence * seasonalPct) / 100);
     return { date, ratePence, basePence, weekend, seasonalPct };
   });

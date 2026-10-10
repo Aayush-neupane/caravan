@@ -2,9 +2,10 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { priceQuote } from "@/features/pricing/engine";
+import { getPricingRules, resolveWeeklyPct } from "@/features/pricing/rules";
 import { isAvailable, validateStay } from "@/features/availability/engine";
 import { BLOCKING_STATUSES } from "@/features/bookings/stateMachine";
-import { makeReference } from "@/lib/format";
+import { makeReference, nightsBetween, parseISODate } from "@/lib/format";
 import { CARAVANS } from "@/data/catalogue";
 import { resolveCoupon, resolveExtras } from "@/features/pricing/coupons";
 import { sendNotification, bookingEmailBodies } from "@/lib/email";
@@ -99,15 +100,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: e instanceof Error ? e.message : "Invalid extras." }, { status: 422 });
     }
 
+    const rules = await getPricingRules();
+    const stayNights = nightsBetween(parseISODate(body.pickup), parseISODate(body.return));
+    const weeklyPct = resolveWeeklyPct(caravan.weeklyDiscountPct, stayNights, rules.discounts);
+
     const prelim = priceQuote({
       baseNightlyPence: caravan.baseNightlyPence,
       weekendNightlyPence: caravan.weekendNightlyPence ?? undefined,
-      weeklyDiscountPct: caravan.weeklyDiscountPct,
+      weeklyDiscountPct: weeklyPct,
       pickupISO: body.pickup, returnISO: body.return,
       cleaningFeePence: caravan.cleaningFeePence,
       extras: extrasResolved,
       taxPct: 20, securityDepositPence: caravan.securityDepositPence, depositPct: 25,
-    });
+    }, null, rules.seasonal);
 
     let coupon = null;
     try {
@@ -120,7 +125,7 @@ export async function POST(req: Request) {
       {
         baseNightlyPence: caravan.baseNightlyPence,
         weekendNightlyPence: caravan.weekendNightlyPence ?? undefined,
-        weeklyDiscountPct: caravan.weeklyDiscountPct,
+        weeklyDiscountPct: weeklyPct,
         pickupISO: body.pickup, returnISO: body.return,
         cleaningFeePence: caravan.cleaningFeePence,
         extras: extrasResolved,
@@ -128,7 +133,8 @@ export async function POST(req: Request) {
         couponKind: coupon ? coupon.kind : "none", couponValue: coupon ? coupon.value : 0,
         securityDepositPence: caravan.securityDepositPence, depositPct: 25,
       },
-      coupon?.code ?? null
+      coupon?.code ?? null,
+      rules.seasonal
     );
 
     const reference = makeReference();

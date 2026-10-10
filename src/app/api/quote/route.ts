@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { priceQuote } from "@/features/pricing/engine";
+import { getPricingRules, resolveWeeklyPct } from "@/features/pricing/rules";
+import { nightsBetween, parseISODate } from "@/lib/format";
 import { isAvailable, validateStay } from "@/features/availability/engine";
 import { BLOCKING_STATUSES } from "@/features/bookings/stateMachine";
 import { resolveCoupon, resolveExtras } from "@/features/pricing/coupons";
@@ -53,7 +55,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: e instanceof Error ? e.message : "Invalid extras." }, { status: 422 });
     }
 
-    const priceWith = async (base: number, weekend: number | null, weeklyDisc: number, cleaning: number, deposit: number) => {
+    const priceWith = async (base: number, weekend: number | null, caravanPct: number, cleaning: number, deposit: number) => {
+      // Live DB rules: seasonal rows price each night; the weekly pct is the
+      // caravan's own when set, else the best fitting global discount rule.
+      const rules = await getPricingRules();
+      const nights = nightsBetween(parseISODate(body.pickup), parseISODate(body.return));
+      const weeklyDisc = resolveWeeklyPct(caravanPct, nights, rules.discounts);
       // Preliminary rental subtotal (no coupon) to validate coupon minimums.
       const prelim = priceQuote({
         baseNightlyPence: base, weekendNightlyPence: weekend ?? undefined,
@@ -61,7 +68,7 @@ export async function POST(req: Request) {
         pickupISO: body.pickup, returnISO: body.return,
         cleaningFeePence: cleaning, extras: extrasResolved, taxPct: 20,
         securityDepositPence: deposit, depositPct: 25,
-      });
+      }, null, rules.seasonal);
       let coupon = null;
       try {
         coupon = await resolveCoupon(body.coupon, { rentalSubtotalPence: prelim.rentalSubtotalPence, caravanSlug: body.slug });
@@ -77,7 +84,8 @@ export async function POST(req: Request) {
           couponKind: coupon ? coupon.kind : "none", couponValue: coupon ? coupon.value : 0,
           securityDepositPence: deposit, depositPct: 25,
         },
-        coupon?.code ?? null
+        coupon?.code ?? null,
+        rules.seasonal
       );
       return { quote };
     };

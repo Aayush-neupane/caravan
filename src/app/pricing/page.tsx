@@ -1,19 +1,20 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { CARAVANS } from "@/data/catalogue";
-import { priceQuote } from "@/features/pricing/engine";
+import { priceQuote, type SeasonalRule } from "@/features/pricing/engine";
+import { getPricingRules } from "@/features/pricing/rules";
 import { gbp } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Pricing & extras", description: "How caravan hire is priced: nightly rates, seasonal multipliers, weekly discounts, cleaning, deposits, mileage and VAT — with itemised examples from the pricing engine." };
 
-function Example({ slug, pickup, ret, label }: { slug: string; pickup: string; ret: string; label: string }) {
+function Example({ slug, pickup, ret, label, seasonal }: { slug: string; pickup: string; ret: string; label: string; seasonal: SeasonalRule[] }) {
   const c = CARAVANS.find((x) => x.slug === slug)!;
   const q = priceQuote({
     baseNightlyPence: c.baseNightlyPence, weekendNightlyPence: c.weekendNightlyPence,
     weeklyDiscountPct: c.weeklyDiscountPct,
     pickupISO: pickup, returnISO: ret, cleaningFeePence: c.cleaningFeePence,
     extras: [], taxPct: 20, securityDepositPence: c.securityDepositPence, depositPct: 25,
-  });
+  }, null, seasonal);
   return (
     <div className="border border-border bg-white p-6" style={{ borderRadius: 10 }}>
       <p className="tick-label">{label}</p>
@@ -33,7 +34,8 @@ function Example({ slug, pickup, ret, label }: { slug: string; pickup: string; r
   );
 }
 
-export default function PricingPage() {
+export default async function PricingPage() {
+  const rules = await getPricingRules();
   return (
     <div className="bg-paper">
       <div className="mx-auto max-w-content px-5 py-12 sm:px-8">
@@ -45,8 +47,8 @@ export default function PricingPage() {
           deposit split. The refundable security deposit is always shown separately and never counted as revenue.
         </p>
         <div className="mt-8 grid gap-6 md:grid-cols-2">
-          <Example slug="the-rowan" pickup="2026-10-16" ret="2026-10-19" label="Short trip · 3 nights" />
-          <Example slug="the-alder" pickup="2026-07-10" ret="2026-07-19" label="Summer week · 9 nights" />
+          <Example slug="the-rowan" pickup="2026-10-16" ret="2026-10-19" label="Short trip · 3 nights" seasonal={rules.seasonal} />
+          <Example slug="the-alder" pickup="2026-07-10" ret="2026-07-19" label="Summer week · 9 nights" seasonal={rules.seasonal} />
         </div>
         <div className="mt-10 grid gap-8 lg:grid-cols-2">
           <div>

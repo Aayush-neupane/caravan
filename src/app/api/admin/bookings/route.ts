@@ -5,9 +5,10 @@ import { authOptions, can } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { gateMutation } from "@/lib/security";
 import { priceQuote } from "@/features/pricing/engine";
+import { getPricingRules, resolveWeeklyPct } from "@/features/pricing/rules";
 import { isAvailable, validateStay } from "@/features/availability/engine";
 import { BLOCKING_STATUSES } from "@/features/bookings/stateMachine";
-import { makeReference } from "@/lib/format";
+import { makeReference, nightsBetween, parseISODate } from "@/lib/format";
 import { CARAVANS } from "@/data/catalogue";
 import { sendNotification } from "@/lib/email";
 
@@ -76,15 +77,20 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Those dates conflict with an existing reservation, hold or maintenance block." }, { status: 409 });
     }
 
+    const rules = await getPricingRules();
     const quote = priceQuote({
       baseNightlyPence: caravan.baseNightlyPence,
       weekendNightlyPence: caravan.weekendNightlyPence ?? undefined,
-      weeklyDiscountPct: caravan.weeklyDiscountPct,
+      weeklyDiscountPct: resolveWeeklyPct(
+        caravan.weeklyDiscountPct,
+        nightsBetween(parseISODate(body.pickup), parseISODate(body.return)),
+        rules.discounts
+      ),
       pickupISO: body.pickup, returnISO: body.return,
       cleaningFeePence: caravan.cleaningFeePence,
       extras: [], taxPct: 20,
       securityDepositPence: caravan.securityDepositPence, depositPct: 25,
-    });
+    }, null, rules.seasonal);
 
     const reference = makeReference();
     const booking = await prisma.$transaction(async (tx) => {

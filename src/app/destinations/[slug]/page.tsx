@@ -19,12 +19,15 @@ export default function DestinationDetail({ params }: { params: { slug: string }
   if (!d) notFound();
   return (
     <div className="bg-paper">
-      <div className="relative bg-forest text-paper">
+      <div className="grain relative overflow-hidden bg-forest text-paper">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={d.heroImage} alt={d.name} className="absolute inset-0 h-full w-full object-cover opacity-50" />
-        <div className="relative mx-auto max-w-content px-5 py-20 sm:px-8">
-          <p className="tick-label !text-sand">{d.duration} · c. {d.distanceMi} miles</p>
-          <h1 className="mt-3 font-display text-5xl sm:text-6xl">{d.name}</h1>
+        <div className="relative z-[2] mx-auto max-w-content px-5 py-20 sm:px-8">
+          <p className="tick-label !text-sand">Expedition chart · {d.duration} · c. {d.distanceMi} miles</p>
+          <div className="mt-3 flex flex-wrap items-end gap-x-8 gap-y-2">
+            <h1 className="font-display leading-[0.95]" style={{ fontSize: "clamp(3rem, 7vw, 5.5rem)" }}>{d.name}</h1>
+            <p className="pb-2 font-display text-5xl text-amber sm:text-6xl" aria-label={`About ${d.distanceMi} miles`}>{d.distanceMi}<span className="font-sans text-base text-paper/60"> mi</span></p>
+          </div>
           <p className="mt-4 max-w-2xl text-[1.05rem] text-paper/85">{d.intro}</p>
         </div>
       </div>

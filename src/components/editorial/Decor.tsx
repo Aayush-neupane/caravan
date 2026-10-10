@@ -1,0 +1,158 @@
+"use client";
+
+import { useId } from "react";
+
+/* Expedition-log decor: contour maps, stamps, route dividers.
+   All motifs belong to overland travel (maps, permits, mile markers).
+   No gradients, no glow, no glass — ink on paper. */
+
+// Faint topographic contours, absolutely positioned.
+export function TopoLines({ dark = false, variant = 0, className = "" }: { dark?: boolean; variant?: number; className?: string }) {
+  const uid = useId().replace(/:/g, "");
+  const stroke = dark ? "#EDE6D6" : "#1A2B23";
+  const paths = [
+    "M-40,120 C120,60 260,180 460,110 C660,40 820,150 1060,90 C1240,45 1380,120 1520,80",
+    "M-40,200 C140,140 300,260 500,190 C700,120 860,230 1100,170 C1280,125 1420,200 1520,160",
+    "M-40,280 C160,220 340,340 540,270 C740,200 900,310 1140,250 C1320,205 1440,280 1520,240",
+    "M-40,360 C180,300 380,420 580,350 C780,280 940,390 1180,330 C1360,285 1460,360 1520,320",
+    "M-40,40 C200,-20 380,80 600,20 C820,-40 980,60 1220,10 C1380,-25 1470,40 1520,20",
+  ];
+  const offset = (variant * 37) % 60;
+  return (
+    <svg
+      className={`pointer-events-none absolute inset-0 h-full w-full ${className}`}
+      viewBox="0 60 1480 340"
+      preserveAspectRatio="xMidYMid slice"
+      aria-hidden="true"
+    >
+      {paths.map((d, i) => (
+        <path
+          key={`${uid}-${i}`}
+          d={d}
+          transform={`translate(0, ${offset * (i % 2 ? 1 : -1) * 0.4})`}
+          fill="none"
+          stroke={stroke}
+          strokeOpacity={i === 2 ? 0.22 : 0.12}
+          strokeWidth={i === 2 ? 1.4 : 1}
+          strokeDasharray={i === 2 ? "none" : "7 6"}
+        />
+      ))}
+      {/* trig points */}
+      {[
+        [300 + offset, 150],
+        [760 - offset, 230],
+        [1180 + offset, 120],
+      ].map(([x, y], i) => (
+        <g key={`${uid}-t${i}`} stroke={stroke} strokeOpacity={0.3} strokeWidth={1}>
+          <circle cx={x} cy={y} r={7} fill="none" />
+          <circle cx={x} cy={y} r={1.4} fill={stroke} />
+          <text x={x + 11} y={y + 4} fontSize={13} fill={stroke} fillOpacity={0.55} fontFamily="Manrope, sans-serif" fontWeight={700}>
+            {120 + i * 37 + offset}m
+          </text>
+        </g>
+      ))}
+    </svg>
+  );
+}
+
+// Rotating expedition stamp. Static when reduced motion is preferred.
+export function Stamp({ text = "SLOW TRAVEL • BATH • EST 2026 • ", size = 112, dark = false }: { text?: string; size?: number; dark?: boolean }) {
+  const uid = useId().replace(/:/g, "");
+  const ink = dark ? "#EDE6D6" : "#1A2B23";
+  return (
+    <div className="stamp-spin relative shrink-0" style={{ width: size, height: size }} aria-hidden="true">
+      <svg viewBox="0 0 120 120" width={size} height={size}>
+        <defs>
+          <path id={`circ-${uid}`} d="M60,60 m-44,0 a44,44 0 1,1 88,0 a44,44 0 1,1 -88,0" />
+        </defs>
+        <circle cx={60} cy={60} r={57} fill="none" stroke={ink} strokeWidth={1.6} />
+        <circle cx={60} cy={60} r={31} fill="none" stroke={ink} strokeWidth={1.2} />
+        <text fontSize={11.5} letterSpacing={2.5} fill={ink} fontFamily="Manrope, sans-serif" fontWeight={800}>
+          <textPath href={`#circ-${uid}`}>{text}</textPath>
+        </text>
+        {/* compass needle */}
+        <g stroke={ink} strokeWidth={2} strokeLinecap="round">
+          <line x1={60} y1={44} x2={60} y2={76} />
+          <line x1={44} y1={60} x2={76} y2={60} opacity={0.45} />
+        </g>
+        <polygon points="60,40 64,52 60,49 56,52" fill="#C9A86A" />
+      </svg>
+    </div>
+  );
+}
+
+// Expedition section marker: oversized numeral, rule, coordinates.
+export function SectionMarker({
+  index,
+  kicker,
+  coords,
+  dark = false,
+}: {
+  index: string;
+  kicker: string;
+  coords?: string;
+  dark?: boolean;
+}) {
+  return (
+    <div className="mb-6 flex items-end justify-between gap-4 border-b-2 border-current pb-3" style={{ color: dark ? "#EDE6D6" : "#1A2B23" }}>
+      <div className="flex items-baseline gap-4">
+        <span className="font-display text-6xl leading-none sm:text-7xl" style={{ color: "transparent", WebkitTextStroke: `1.5px ${dark ? "#C9A86A" : "#1A2B23"}` }} aria-hidden="true">
+          {index}
+        </span>
+        <p className="tick-label !text-[0.78rem]" style={{ color: dark ? "#EDE6D6" : undefined }}>{kicker}</p>
+      </div>
+      {coords ? (
+        <p className="hidden font-mono text-[0.72rem] tracking-wider opacity-60 sm:block">{coords}</p>
+      ) : null}
+    </div>
+  );
+}
+
+// Dashed overland route divider with mile nodes.
+export function RouteDivider({ from = "BATH", to = "ANYWHERE", miles = "c. 180 mi", dark = false }: { from?: string; to?: string; miles?: string; dark?: boolean }) {
+  const uid = useId().replace(/:/g, "");
+  const ink = dark ? "#EDE6D6" : "#1A2B23";
+  return (
+    <div className="relative mx-auto max-w-wide px-5 sm:px-8" aria-hidden="true">
+      <svg viewBox="0 0 1200 70" className="h-14 w-full" preserveAspectRatio="none">
+        <path
+          id={`rd-${uid}`}
+          d="M10,50 C250,10 450,65 650,35 C850,5 1000,55 1190,25"
+          fill="none"
+          stroke={ink}
+          strokeOpacity={0.5}
+          strokeWidth={1.6}
+          strokeDasharray="2 7"
+          strokeLinecap="round"
+        />
+        {[
+          { x: 10, label: from },
+          { x: 600, label: miles },
+          { x: 1190, label: to },
+        ].map((n) => (
+          <g key={n.label}>
+            <circle cx={n.x} cy={n.x === 600 ? 38 : n.x < 600 ? 42 : 28} r={4.5} fill={ink} />
+            <circle cx={n.x} cy={n.x === 600 ? 38 : n.x < 600 ? 42 : 28} r={8.5} fill="none" stroke={ink} strokeOpacity={0.5} />
+          </g>
+        ))}
+      </svg>
+      <div className="flex justify-between font-mono text-[0.68rem] font-bold uppercase tracking-[0.18em]" style={{ color: ink }}>
+        <span>{from}</span>
+        <span className="text-amberDark">{miles}</span>
+        <span>{to}</span>
+      </div>
+    </div>
+  );
+}
+
+// Small compass for headers/footers.
+export function Compass({ size = 30, className = "" }: { size?: number; className?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" className={className} aria-hidden="true">
+      <circle cx={16} cy={16} r={14.5} fill="none" stroke="currentColor" strokeWidth={1.4} />
+      <polygon points="16,5 19,16 16,27 13,16" fill="currentColor" />
+      <polygon points="16,5 19,16 13,16" fill="#C9A86A" />
+      <text x={16} y={11.5} textAnchor="middle" fontSize={7} fontWeight={800} fontFamily="Manrope, sans-serif" fill="#1A2B23">N</text>
+    </svg>
+  );
+}

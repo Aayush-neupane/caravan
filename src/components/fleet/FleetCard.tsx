@@ -16,12 +16,21 @@ export function FleetCard({ caravan, pickup, ret }: { caravan: CatalogueCaravan;
         />
       </Link>
       <div className="p-5">
-        <p className="tick-label">{caravan.category}</p>
+        <div className="flex items-center justify-between gap-2">
+          <p className="tick-label">{caravan.category}</p>
+          <p className="font-mono text-[0.68rem] font-bold uppercase tracking-wider text-amberDark">Nº {caravan.slug.replace("the-", "").toUpperCase()}</p>
+        </div>
         <h3 className="mt-1 font-display text-2xl text-charcoal">
           <Link href={`/fleet/${caravan.slug}${qs}`} className="hover:text-forest">{caravan.name}</Link>
         </h3>
         <p className="mt-1 text-[0.9rem] text-muted">{caravan.tagline} · Sleeps {caravan.berths} · {caravan.mtplmKg.toLocaleString()} kg MTPLM</p>
         <p className="mt-3 line-clamp-2 text-[0.92rem] leading-relaxed text-charcoal/85">{caravan.description}</p>
+        {/* Weight plate — the numbers towers actually check */}
+        <dl className="mt-4 grid grid-cols-3 divide-x divide-border border-y border-border text-center" aria-label="Key towing figures">
+          <div className="py-2"><dt className="text-[0.64rem] font-bold uppercase tracking-wider text-muted">MTPLM</dt><dd className="font-mono text-[0.85rem] font-bold text-forest">{caravan.mtplmKg.toLocaleString()} kg</dd></div>
+          <div className="py-2"><dt className="text-[0.64rem] font-bold uppercase tracking-wider text-muted">Length</dt><dd className="font-mono text-[0.85rem] font-bold text-forest">{caravan.lengthM} m</dd></div>
+          <div className="py-2"><dt className="text-[0.64rem] font-bold uppercase tracking-wider text-muted">Sleeps</dt><dd className="font-mono text-[0.85rem] font-bold text-forest">{caravan.berths}</dd></div>
+        </dl>
         <div className="mt-4 flex items-end justify-between border-t border-border pt-4">
           <div>
             <p className="text-[0.75rem] font-semibold uppercase tracking-wide text-muted">From</p>

@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { BookingSearchPanel } from "@/components/brand/BookingSearchPanel";
 import { Reveal, SectionHeading } from "@/components/editorial/Reveal";
 import { HeroImage } from "@/components/editorial/HeroImage";
+import { Compass, RouteDivider, SectionMarker, Stamp, TopoLines } from "@/components/editorial/Decor";
 import { FleetCard } from "@/components/fleet/FleetCard";
 import { CARAVANS, DESTINATIONS } from "@/data/catalogue";
 import { gbp } from "@/lib/format";
@@ -25,7 +26,7 @@ export default function HomePage() {
   return (
     <>
       {/* 1 — Cinematic hero with solid booking panel */}
-      <section className="relative bg-forest text-paper" aria-label="Introduction">
+      <section className="grain relative overflow-hidden bg-forest text-paper" aria-label="Introduction">
         <div className="absolute inset-0 overflow-hidden" aria-hidden="true">
           <HeroImage
             src="https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?auto=format&fit=crop&w=2200&q=75"
@@ -33,19 +34,23 @@ export default function HomePage() {
           />
           <div className="absolute inset-0" style={{ background: "rgba(18,32,25,0.55)" }} />
         </div>
-        <div className="relative mx-auto grid max-w-wide gap-10 px-5 pb-14 pt-16 sm:px-8 lg:grid-cols-12 lg:pt-24">
+        <div className="relative z-[2] mx-auto grid max-w-wide gap-10 px-5 pb-10 pt-16 sm:px-8 lg:grid-cols-12 lg:pt-24">
           <div className="lg:col-span-7">
-            <p className="tick-label !text-sand">Caravan hire · Bath, Somerset</p>
-            <h1 className="mt-4 font-display text-[3.2rem] leading-[0.98] sm:text-[4.5rem]" style={{ letterSpacing: "-0.015em" }}>
+            <div className="flex items-center gap-3">
+              <Compass size={26} className="text-sand" />
+              <p className="tick-label !text-sand">Field log Nº 01 — Caravan hire · Bath, Somerset</p>
+            </div>
+            <h1 className="mt-4 font-display leading-[0.95]" style={{ fontSize: "clamp(3.4rem, 8.5vw, 7rem)", letterSpacing: "-0.015em" }}>
               Leave room for the unexpected.
             </h1>
             <p className="mt-5 max-w-xl text-[1.1rem] leading-relaxed text-paper/85">
               Thoughtfully equipped caravans for the freedom to travel at your own pace —
               across the Cotswolds, the South West and Wales.
             </p>
-            <div className="mt-6 flex flex-wrap gap-3">
+            <div className="mt-6 flex flex-wrap items-center gap-3">
               <Link href="/fleet" className="btn-primary !border-white/20">Meet the fleet</Link>
               <Link href="/destinations" className="btn-secondary !bg-transparent !text-paper !border-white/40 hover:!border-white">Road-trip itineraries</Link>
+              <span className="hidden xl:block"><Stamp size={96} dark /></span>
             </div>
             <dl className="mt-8 grid max-w-lg grid-cols-3 gap-4 border-t border-white/20 pt-5 text-[0.85rem]">
               <div><dt className="text-paper/60">Caravans</dt><dd className="mt-1 font-display text-2xl">Three</dd></div>
@@ -54,16 +59,28 @@ export default function HomePage() {
             </dl>
           </div>
           <div className="lg:col-span-5 lg:pt-10">
-            <div className="bg-paper p-2" style={{ borderRadius: 12 }}>
+            <div className="relative bg-paper p-2" style={{ borderRadius: 12 }}>
+              <p className="absolute -top-3 left-4 bg-amber px-2 py-0.5 font-mono text-[0.68rem] font-bold uppercase tracking-[0.14em] text-forest" style={{ borderRadius: 3 }}>Expedition permit — free to check</p>
               <BookingSearchPanel compact />
             </div>
+          </div>
+        </div>
+        <div className="relative z-[2] border-t border-white/15">
+          <div className="mx-auto flex max-w-wide flex-wrap gap-x-8 gap-y-1 px-5 py-3 font-mono text-[0.7rem] uppercase tracking-[0.16em] text-paper/55 sm:px-8">
+            <span>Grid ref ST 726 651 — Lansdown Depot</span>
+            <span>51.3811° N, 2.3590° W</span>
+            <span className="hidden sm:inline">Season: high summer ×1.2</span>
+            <span className="hidden md:inline">UHF channel 7 — yard radio</span>
           </div>
         </div>
       </section>
 
       {/* 2 — Brand promise */}
       <section className="border-b border-border bg-paper">
-        <div className="mx-auto grid max-w-content gap-8 px-5 py-14 sm:px-8 lg:grid-cols-12">
+        <div className="mx-auto max-w-content px-5 pt-12 sm:px-8">
+          <SectionMarker index="01" kicker="Our promise — why three vans, not thirty" coords="51.38°N 2.36°W" />
+        </div>
+        <div className="mx-auto grid max-w-content gap-8 px-5 pb-14 sm:px-8 lg:grid-cols-12">
           <Reveal className="lg:col-span-4">
             <p className="tick-label">Our promise</p>
             <h2 className="mt-3 font-display text-4xl leading-tight text-charcoal">A considered escape from the ordinary.</h2>
@@ -83,13 +100,15 @@ export default function HomePage() {
       </section>
 
       {/* 3 — Featured fleet: asymmetric editorial */}
-      <section className="bg-paper" aria-label="Featured caravans">
-        <div className="mx-auto max-w-wide px-5 py-16 sm:px-8">
-          <SectionHeading
-            kicker="The fleet"
-            title="Three caravans, three ways to travel."
-            lede="Genuine inventory with verified weights and nightly rates. Choose dates to see live availability."
-          />
+      <section className="relative overflow-hidden bg-paper" aria-label="Featured caravans">
+        <span className="ghost-word pointer-events-none absolute -top-4 left-0 text-[22vw] font-bold" aria-hidden="true">FLEET</span>
+        <div className="relative mx-auto max-w-wide px-5 py-16 sm:px-8">
+          <SectionMarker index="02" kicker="The fleet — three vans, three temperaments" coords="ST 726 651" />
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <h2 className="max-w-xl font-display text-4xl leading-[1.05] sm:text-[2.9rem]">Three caravans, three ways to travel.</h2>
+            <Link href="/fleet" className="border-b-2 border-amber pb-0.5 font-semibold text-forest">Open the full catalogue →</Link>
+          </div>
+          <p className="mt-3 max-w-2xl text-muted">Genuine inventory with verified weights and nightly rates. Choose dates to see live availability.</p>
           <div className="mt-10 grid gap-6 md:grid-cols-3">
             {CARAVANS.map((c, i) => (
               <Reveal key={c.slug} delay={i * 0.06}>
@@ -100,9 +119,17 @@ export default function HomePage() {
         </div>
       </section>
 
+      <div className="border-b border-border bg-paper py-8" aria-hidden="true">
+        <RouteDivider from="THE YARD" to="THE FIELD" miles="0 mi — step outside" />
+      </div>
+
       {/* 4 — Rental experience editorial (offset image + text) */}
-      <section className="border-y border-border bg-sand/60">
-        <div className="mx-auto grid max-w-wide gap-10 px-5 py-16 sm:px-8 lg:grid-cols-12">
+      <section className="relative overflow-hidden border-y border-border bg-sand/60">
+        <TopoLines variant={1} />
+        <div className="relative mx-auto max-w-wide px-5 pt-14 sm:px-8">
+          <SectionMarker index="03" kicker="The experience — pitched by four, tea by half past" coords="Waterproofs optional" />
+        </div>
+        <div className="relative mx-auto grid max-w-wide gap-10 px-5 pb-16 sm:px-8 lg:grid-cols-12">
           <div className="lg:col-span-7">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -133,8 +160,11 @@ export default function HomePage() {
 
       {/* 5 — How it works (numbered, not 3 generic cards) */}
       <section className="bg-paper">
-        <div className="mx-auto max-w-content px-5 py-16 sm:px-8">
-          <SectionHeading kicker="How it works" title="Eight steps, one calm week." lede="From first search to deposit return — what actually happens, in order." />
+        <div className="mx-auto max-w-content px-5 pt-16 sm:px-8">
+          <SectionMarker index="04" kicker="Passage plan — eight legs, one calm week" coords="Planning table, Bath" />
+        </div>
+        <div className="mx-auto max-w-content px-5 pb-16 sm:px-8">
+          <h2 className="sr-only">How it works</h2>
           <ol className="mt-10 grid gap-0 border-t border-border md:grid-cols-2">
             {[
               ["Choose caravan & dates", "Filter the fleet by berths, weights and facilities. Availability is live — what you see is what you can book."],
@@ -156,9 +186,13 @@ export default function HomePage() {
       </section>
 
       {/* 6 — Destinations: editorial rows, not cards */}
-      <section className="border-y border-border bg-forest text-paper">
-        <div className="mx-auto max-w-wide px-5 py-16 sm:px-8">
-          <SectionHeading dark kicker="Destinations" title="Written routes, not pins on a map." lede="Three starting itineraries with honest distances, seasonal notes and suitable vans." />
+      <section className="grain relative overflow-hidden border-y border-border bg-forest text-paper">
+        <div className="pointer-events-none absolute inset-0" aria-hidden="true"><TopoLines dark variant={2} /></div>
+        <span className="ghost-word ghost-word-dark pointer-events-none absolute right-0 top-6 text-[20vw] font-bold" aria-hidden="true">ROUTES</span>
+        <div className="relative z-[2] mx-auto max-w-wide px-5 pt-16 sm:px-8">
+          <SectionMarker dark index="05" kicker="Charted routes — driven miles, honest distances" coords="Admiralty charts 1165–1168" />
+          <h2 className="max-w-2xl font-display text-4xl leading-[1.05] sm:text-[2.9rem]">Written routes, not pins on a map.</h2>
+          <p className="mt-3 max-w-2xl text-paper/75">Three starting itineraries with honest distances, seasonal notes and suitable vans.</p>
           <div className="mt-10 space-y-8">
             {DESTINATIONS.map((d, i) => (
               <Reveal key={d.slug}>
@@ -168,8 +202,13 @@ export default function HomePage() {
                     <img src={d.heroImage} alt={`${d.name} landscape`} className="aspect-[16/10] w-full object-cover" style={{ borderRadius: 10 }} loading="lazy" />
                   </div>
                   <div className="lg:col-span-6 lg:col-start-7">
-                    <p className="tick-label !text-sand/70">{d.duration} · c. {d.distanceMi} miles</p>
-                    <h3 className="mt-2 font-display text-3xl">{d.name}</h3>
+                    <div className="flex items-baseline gap-4">
+                      <span className="font-display text-6xl leading-none text-amber sm:text-7xl" aria-hidden="true">{d.distanceMi}</span>
+                      <div>
+                        <p className="tick-label !text-sand/70">{d.duration} · miles, door to door</p>
+                        <h3 className="mt-1 font-display text-3xl">{d.name}</h3>
+                      </div>
+                    </div>
                     <p className="mt-3 leading-relaxed text-paper/80">{d.intro}</p>
                     <div className="mt-4 flex flex-wrap gap-3">
                       <Link href={`/destinations/${d.slug}`} className="btn-secondary !bg-transparent !text-paper !border-white/40 hover:!border-white">Read the itinerary</Link>
@@ -187,7 +226,9 @@ export default function HomePage() {
       <section className="bg-paper">
         <div className="mx-auto grid max-w-wide gap-10 px-5 py-16 sm:px-8 lg:grid-cols-12">
           <div className="lg:col-span-4">
-            <SectionHeading kicker="Included" title="What every hire includes." lede="No tiers, no unlockables. The van leaves ready." />
+            <SectionMarker index="06" kicker="Inventory — every hire leaves ready" />
+            <h2 className="mt-4 font-display text-3xl leading-tight">What every hire includes.</h2>
+            <p className="mt-2 text-muted">No tiers, no unlockables. The van leaves ready.</p>
           </div>
           <div className="lg:col-span-7 lg:col-start-6">
             <table className="table-quiet">
@@ -208,7 +249,9 @@ export default function HomePage() {
       {/* 8 — Reviews: one prominent + supporting, labelled demo */}
       <section className="border-y border-border bg-sand/60">
         <div className="mx-auto max-w-content px-5 py-16 sm:px-8">
-          <SectionHeading kicker="Travellers" title="Notes from the road." lede="Demonstration reviews for layout. Verified customer reviews will appear here after first completed hires." />
+          <SectionMarker index="07" kicker="Logbook — notes from the road" coords="Entries verified against hires" />
+          <h2 className="mt-4 font-display text-4xl">Notes from the road.</h2>
+          <p className="mt-2 max-w-2xl text-muted">Demonstration reviews for layout. Verified customer reviews will appear here after first completed hires.</p>
           <figure className="mt-8 border-l-2 border-amber bg-white p-7" style={{ borderRadius: 8 }}>
             <blockquote className="font-display text-2xl leading-snug text-charcoal sm:text-[1.8rem]">
               “We collected on a wet Friday and were drinking tea with the door open by four. The handover alone was worth it — calm, thorough, unhurried.”
@@ -231,7 +274,10 @@ export default function HomePage() {
       {/* 9 — FAQ */}
       <section className="bg-paper">
         <div className="mx-auto grid max-w-wide gap-10 px-5 py-16 sm:px-8 lg:grid-cols-12">
-          <div className="lg:col-span-4"><SectionHeading kicker="Questions" title="Common booking questions." /></div>
+          <div className="lg:col-span-4">
+            <SectionMarker index="08" kicker="Signals — questions, answered plainly" />
+            <h2 className="mt-4 font-display text-3xl leading-tight">Common booking questions.</h2>
+          </div>
           <div className="lg:col-span-7 lg:col-start-6">
             <dl className="divide-y divide-border border-y border-border">
               {FAQS.map((f) => (
@@ -245,17 +291,27 @@ export default function HomePage() {
         </div>
       </section>
 
+      <div className="border-y border-border bg-sand/60 py-8" aria-hidden="true">
+        <RouteDivider from="LOG BOOK" to="LEDGER" miles="every pound explained" />
+      </div>
+
       {/* 10 — Final CTA */}
-      <section className="bg-forest text-paper">
-        <div className="mx-auto grid max-w-wide items-center gap-8 px-5 py-16 sm:px-8 lg:grid-cols-12">
+      <section className="grain relative overflow-hidden bg-forest text-paper">
+        <div className="pointer-events-none absolute inset-0" aria-hidden="true"><TopoLines dark variant={0} /></div>
+        <div className="relative z-[2] mx-auto grid max-w-wide items-center gap-8 px-5 py-16 sm:px-8 lg:grid-cols-12">
           <div className="lg:col-span-7">
-            <h2 className="font-display text-4xl leading-tight sm:text-5xl">The lanes are waiting. Travel at your own pace.</h2>
+            <div className="flex items-center gap-4">
+              <Stamp size={88} dark />
+              <p className="tick-label !text-sand/70">Final entry — the lanes are waiting</p>
+            </div>
+            <h2 className="mt-4 font-display leading-[0.98]" style={{ fontSize: "clamp(2.6rem, 5.5vw, 4.5rem)" }}>Travel at your own pace.</h2>
             <p className="mt-4 max-w-xl text-paper/80">Check live availability for your dates — no account needed, no payment until you choose a caravan.</p>
+            <p className="mt-4 font-mono text-[0.72rem] uppercase tracking-[0.18em] text-paper/50">Bath → Cotswolds 28 mi · Bath → St Davids 180 mi · Bath → Brecon 60 mi</p>
           </div>
           <div className="lg:col-span-4 lg:col-start-9">
-            <div className="border border-white/20 bg-forestDeep p-5" style={{ borderRadius: 10 }}>
-              <p className="tick-label !text-sand/70">Next step</p>
-              <div className="mt-3 grid gap-3">
+            <div className="relative border border-white/20 bg-forestDeep p-5" style={{ borderRadius: 10 }}>
+              <p className="absolute -top-3 left-4 bg-amber px-2 py-0.5 font-mono text-[0.68rem] font-bold uppercase tracking-[0.14em] text-forest" style={{ borderRadius: 3 }}>Permit office — open</p>
+              <div className="mt-2 grid gap-3">
                 <Link href="/fleet" className="btn-primary !bg-amber !border-amber !text-forest hover:!bg-white">Browse the fleet</Link>
                 <Link href="/booking" className="btn-secondary !bg-transparent !text-paper !border-white/40">Start a booking</Link>
               </div>

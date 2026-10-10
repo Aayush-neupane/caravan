@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions, isStaff } from "@/lib/auth";
+import { Compass } from "@/components/editorial/Decor";
 import { AdminSignOut } from "./signout";
 import { AdminFade } from "./fade";
 
@@ -35,9 +36,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       {/* Sidebar */}
       <aside className="bg-forest text-paper lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto">
         <div className="flex items-center justify-between px-5 pb-4 pt-5 lg:block">
-          <div>
-            <p className="font-display text-[1.4rem] leading-none">Hartley <span className="text-amber">&amp;</span> Moor</p>
-            <p className="mt-1.5 text-[0.68rem] font-bold uppercase tracking-[0.18em] text-paper/55">Operations</p>
+          <div className="flex items-center gap-2.5">
+            <Compass size={30} className="text-sand" />
+            <div>
+              <p className="font-display text-[1.4rem] leading-none">Hartley <span className="text-amber">&amp;</span> Moor</p>
+              <p className="mt-1.5 text-[0.68rem] font-bold uppercase tracking-[0.18em] text-paper/55">Operations</p>
+            </div>
           </div>
           <Link href="/" className="text-[0.8rem] text-paper/70 underline underline-offset-2 hover:text-white lg:mt-3 lg:inline-block">
             ← View site

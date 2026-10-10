@@ -1,18 +1,23 @@
 import Link from "next/link";
 import { SITE } from "@/lib/site";
+import { Compass, TopoLines } from "@/components/editorial/Decor";
 
 export function SiteFooter() {
   return (
-    <footer className="bg-forest text-paper">
-      <div className="mx-auto grid max-w-wide gap-10 px-5 py-14 sm:px-8 md:grid-cols-12">
+    <footer className="grain relative overflow-hidden bg-forest text-paper">
+      <div className="pointer-events-none absolute inset-0" aria-hidden="true"><TopoLines dark variant={1} /></div>
+      <div className="relative z-[2] mx-auto grid max-w-wide gap-10 px-5 py-14 sm:px-8 md:grid-cols-12">
         <div className="md:col-span-4">
-          <p className="font-display text-2xl">Hartley <span className="text-amber">&amp;</span> Moor</p>
+          <div className="flex items-center gap-3">
+            <Compass size={34} className="text-sand" />
+            <p className="font-display text-2xl">Hartley <span className="text-amber">&amp;</span> Moor</p>
+          </div>
           <p className="mt-3 max-w-sm text-[0.92rem] leading-relaxed text-paper/75">
             A considered escape from the ordinary. Three caravans, kept to a high standard, hired from Bath
             for slow travel across {SITE.region}.
           </p>
-          <p className="mt-5 text-[0.85rem] text-paper/70">
-            {SITE.address}
+          <p className="mt-5 font-mono text-[0.72rem] uppercase tracking-[0.14em] text-paper/50">
+            ST 726 651 · 51.3811° N, 2.3590° W
             <br />{SITE.phone} · {SITE.email}
           </p>
         </div>
@@ -50,7 +55,7 @@ export function SiteFooter() {
           </p>
         </nav>
       </div>
-      <div className="border-t border-white/15">
+      <div className="relative z-[2] border-t border-white/15">
         <div className="mx-auto flex max-w-wide flex-col gap-2 px-5 py-5 text-[0.78rem] text-paper/60 sm:flex-row sm:items-center sm:justify-between sm:px-8">
           <span>© {new Date().getFullYear()} Hartley &amp; Moor, Bath. All rights reserved.</span>
           <span>Photography via Unsplash. Alt text on every image.</span>

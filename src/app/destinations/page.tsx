@@ -1,17 +1,23 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { DESTINATIONS } from "@/data/catalogue";
+import { SectionMarker, TopoLines } from "@/components/editorial/Decor";
 
 export const metadata: Metadata = { title: "Destinations & itineraries", description: "Road-trip itineraries from Bath: Cotswold lanes, Pembrokeshire coast and Brecon dark skies — distances, seasons and suitable caravans." };
 
 export default function DestinationsPage() {
   return (
     <div className="bg-paper">
-      <div className="mx-auto max-w-wide px-5 py-12 sm:px-8">
-        <p className="tick-label">Destinations</p>
-        <h1 className="mt-3 font-display text-5xl text-charcoal">Start with the route.</h1>
+      <div className="relative overflow-hidden border-b border-border bg-sand/50">
+        <TopoLines variant={0} />
+        <div className="relative mx-auto max-w-wide px-5 py-12 sm:px-8">
+          <SectionMarker index="C" kicker="Charts — start with the route" coords="Three surveyed itineraries" />
+          <h1 className="mt-4 font-display leading-[0.98]" style={{ fontSize: "clamp(2.8rem, 6vw, 4.8rem)" }}>Start with the route.</h1>
         <p className="mt-4 max-w-2xl text-muted">Itineraries are written from driven miles, not brochure copy. No invented campsite availability, times or restrictions — check sites directly before you travel.</p>
-        <div className="mt-10 space-y-10">
+        </div>
+      </div>
+      <div className="mx-auto max-w-wide px-5 py-12 sm:px-8">
+        <div className="space-y-10">
           {DESTINATIONS.map((d) => (
             <article key={d.slug} className="grid gap-6 border-t border-border pt-8 lg:grid-cols-12">
               <div className="lg:col-span-5">

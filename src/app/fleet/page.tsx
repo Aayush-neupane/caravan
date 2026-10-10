@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { FleetExplorer } from "./explorer";
 import { CARAVANS } from "@/data/catalogue";
+import { SectionMarker, TopoLines } from "@/components/editorial/Decor";
 
 export const metadata: Metadata = {
   title: "Fleet",
@@ -11,10 +12,11 @@ export const metadata: Metadata = {
 export default function FleetPage({ searchParams }: { searchParams: Record<string, string | undefined> }) {
   return (
     <div className="bg-paper">
-      <div className="border-b border-border bg-sand/50">
-        <div className="mx-auto max-w-wide px-5 py-12 sm:px-8">
-          <p className="tick-label">Fleet catalogue</p>
-          <h1 className="mt-3 font-display text-5xl leading-[1.02] text-charcoal">Choose your way to travel.</h1>
+      <div className="relative overflow-hidden border-b border-border bg-sand/50">
+        <TopoLines variant={2} />
+        <div className="relative mx-auto max-w-wide px-5 py-12 sm:px-8">
+          <SectionMarker index="F" kicker="Fleet catalogue — weighed, measured, photographed" coords="Unladen weights verified" />
+          <h1 className="mt-4 font-display leading-[0.98]" style={{ fontSize: "clamp(2.8rem, 6vw, 4.8rem)" }}>Choose your way to travel.</h1>
           <p className="mt-4 max-w-2xl leading-relaxed text-muted">
             {CARAVANS.length} caravans, each with verified weights, honest nightly rates and live availability.
             Filters reflect real inventory attributes only. Search parameters are kept in the URL — share or return any time.

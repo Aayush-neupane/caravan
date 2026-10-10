@@ -25,7 +25,7 @@ export default function ArticlePage({ params }: { params: { slug: string } }) {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={j.heroImage} alt="" className="mt-8 aspect-[21/9] w-full object-cover" style={{ borderRadius: 10 }} />
         <div className="mt-8 max-w-2xl space-y-5 text-[1.03rem] leading-relaxed text-charcoal/90">
-          {j.body.map((p, i) => <p key={i}>{p}</p>)}
+          {j.body.map((p, i) => <p key={i} className={i === 0 ? "dropcap" : undefined}>{p}</p>)}
         </div>
         <div className="mt-10 border-t border-border pt-6">
           <p className="tick-label">Keep reading</p>

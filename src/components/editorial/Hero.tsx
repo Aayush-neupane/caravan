@@ -21,7 +21,7 @@ export function CinematicHero() {
   const copy = (
     <>
       <p className={KICKER}>Field log Nº 01 — Bath, Somerset</p>
-      <h1 className="mt-3 max-w-5xl font-display leading-[0.95]" style={{ fontSize: "clamp(3.2rem, 8.5vw, 7rem)", letterSpacing: "-0.015em" }}>
+      <h1 className="mt-3 max-w-3xl font-display leading-[0.95]" style={{ fontSize: "clamp(3.2rem, 8.5vw, 7rem)", letterSpacing: "-0.015em" }}>
         Leave room for the unexpected<span className="text-amber">.</span>
       </h1>
       <p className="mt-5 max-w-xl text-[1.1rem] leading-relaxed text-paper/85">
@@ -44,14 +44,14 @@ export function CinematicHero() {
         <div className="absolute inset-0" aria-hidden="true">
           <DriveScene />
         </div>
-        <div className="relative z-[2] mx-auto w-full max-w-wide px-5 pb-16 pt-32 sm:px-8">{copy}</div>
+        <div className="relative z-[2] mx-auto w-full max-w-wide px-5 pb-14 pt-32 sm:px-8">{copy}</div>
       </section>
     );
   }
 
   return (
     <div ref={ref} className="relative bg-forest" style={{ height: "240vh" }} aria-label="Introduction">
-      <div className="sticky top-0 h-screen overflow-hidden">
+      <div className="sticky top-0 flex h-screen flex-col justify-end overflow-hidden">
         <div className="absolute inset-0" aria-hidden="true">
           <DriveScene progress={scrollYProgress} />
         </div>
@@ -62,13 +62,13 @@ export function CinematicHero() {
           <Compass size={24} className="text-sand" />
         </div>
 
-        <div className="relative z-[2] mx-auto w-full max-w-wide px-5 pt-28 sm:px-8 sm:pt-32">
+        <div className="relative z-[2] mx-auto w-full max-w-wide px-5 pb-14 sm:px-8">
           {copy}
         </div>
 
         <motion.p
           style={{ opacity: cueOpacity }}
-          className="absolute bottom-6 left-5 z-[2] font-mono text-[0.66rem] font-bold uppercase tracking-[0.24em] text-paper/70 sm:left-8"
+          className="absolute bottom-6 right-5 z-[2] font-mono text-[0.66rem] font-bold uppercase tracking-[0.24em] text-paper/70 sm:right-8"
           aria-hidden="true"
         >
           Scroll — the van pulls away

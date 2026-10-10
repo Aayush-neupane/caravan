@@ -268,9 +268,9 @@ export function DriveScene({ progress }: { progress?: MotionValue<number> }) {
   const bob = useTransform(p, [0, 0.25, 0.5, 0.75, 1], [0, -6, 0, -6, 0]);
   // The outfit starts at the left, parked over the hidden line, and pulls
   // away to the right — uncovering the phrase as it goes.
-  const convoyXAnim = useTransform(p, [0, 1], [-60, 830]);
-  const convoyX: number | MotionValue<number> = reduce ? 830 : convoyXAnim;
-  const phraseAnim = useTransform(p, [0.08, 0.38], [0, 1]);
+  const convoyXAnim = useTransform(p, [0, 1], [-60, 1290]);
+  const convoyX: number | MotionValue<number> = reduce ? 1290 : convoyXAnim;
+  const phraseAnim = useTransform(p, [0.72, 0.96], [0, 1]);
   const phraseOpacity: number | MotionValue<number> = reduce ? 1 : phraseAnim;
 
   return (
@@ -370,15 +370,17 @@ export function DriveScene({ progress }: { progress?: MotionValue<number> }) {
       <line x1={0} y1={472} x2={1440} y2={472} stroke={SAND} strokeOpacity={0.85} strokeWidth={3} />
       <line x1={0} y1={522} x2={1440} y2={522} stroke={SAND} strokeOpacity={0.8} strokeWidth={3} strokeDasharray="34 26" />
 
-      {/* the hidden line: parked under the outfit, revealed as it pulls away */}
+      {/* the hidden line: sits right of the starting van, fully covered as it
+          passes over, uncovered as the rear bumper clears — paper on tarmac */}
       <motion.text
-        x={70}
-        y={432}
-        fontSize={56}
+        x={820}
+        y={490}
+        fontSize={40}
         fontStyle="italic"
         fontFamily="'Cormorant Garamond', Georgia, serif"
         fontWeight={600}
-        fill={SAND}
+        letterSpacing={1}
+        fill="#F8F7F2"
         style={{ opacity: phraseOpacity }}
       >
         Tow out at golden hour.

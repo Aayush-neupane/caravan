@@ -5,6 +5,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { CARAVANS, EXTRAS } from "@/data/catalogue";
 import { DateRangeField } from "@/components/forms/DateRangePicker";
 import { Select } from "@/components/forms/Select";
+import { MiniOutfit, RouteProgress } from "@/components/editorial/MiniConvoy";
 import { gbp } from "@/lib/format";
 
 type FlowQuote = {
@@ -155,13 +156,7 @@ export function BookingFlow({ initial }: { initial: Record<string, string | unde
 
   return (
     <div className="mt-6">
-      <ol className="grid gap-2 sm:grid-cols-3" aria-label="Booking progress">
-        {STEPS.map((s, i) => (
-          <li key={s} aria-current={i === step ? "step" : undefined} className={`border px-4 py-3 text-[0.88rem] font-semibold transition-colors ${i === step ? "border-forest bg-forest text-white" : i < step ? "border-forest/40 bg-white text-forest" : "border-border bg-white text-muted"}`} style={{ borderRadius: 8 }}>
-            <span className="mr-2 font-display text-lg">{i + 1}.</span>{s}
-          </li>
-        ))}
-      </ol>
+      {!done && <RouteProgress step={step} labels={STEPS} />}
 
       <AnimatePresence mode="wait" custom={dir}>
         <motion.div key={step} custom={dir} variants={stepVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.22 }}>
@@ -319,6 +314,8 @@ export function BookingFlow({ initial }: { initial: Record<string, string | unde
             <div className="p-6 sm:px-8">
               <p className="tick-label">Booking reference</p>
               <p className="mt-1 font-mono text-3xl font-bold tracking-wider text-forest">{done.reference}</p>
+              <div className="mt-3 max-w-[10rem]" aria-hidden="true"><MiniOutfit flag /></div>
+              <p className="mt-1 font-mono text-[0.68rem] font-bold uppercase tracking-[0.18em] text-success">✓ Arrived — see you at the depot</p>
               <p className="mt-3 text-[0.92rem] leading-relaxed text-charcoal/85">Deposit {done.deposit} recorded as a labelled demo payment (no real money moved). Total {done.total} incl. VAT.</p>
             </div>
             <div className="hidden border-l-2 border-dashed border-border sm:block" aria-hidden="true" />

@@ -270,7 +270,10 @@ export function DriveScene({ progress }: { progress?: MotionValue<number> }) {
   // away to the right — uncovering the phrase as it goes.
   const convoyXAnim = useTransform(p, [0, 1], [-60, 1290]);
   const convoyX: number | MotionValue<number> = reduce ? 1290 : convoyXAnim;
-  const phraseAnim = useTransform(p, [0.72, 0.96], [0, 1]);
+  // Cinematic centre reveal: the outfit's midpoint reaches screen centre at
+  // ~p 0.34 (convoyX ≈ 403). The line fades in as the van covers it, sits
+  // BEHIND the convoy in paint order, and stays once the outfit pulls away.
+  const phraseAnim = useTransform(p, [0.3, 0.55, 1], [0, 1, 1]);
   const phraseOpacity: number | MotionValue<number> = reduce ? 1 : phraseAnim;
 
   return (
@@ -290,9 +293,22 @@ export function DriveScene({ progress }: { progress?: MotionValue<number> }) {
       ))}
       {/* dusk band lifting the horizon */}
       <rect x={0} y={330} width={1440} height={142} fill="#212B22" />
-      {/* sun, high and clear of the church — the outfit tows toward it */}
-      <circle cx={1300} cy={150} r={56} fill="none" stroke={AMBER} strokeOpacity={0.35} strokeWidth={1.5} />
-      <circle cx={1300} cy={150} r={40} fill={AMBER} />
+      {/* sun, high and clear of the church — the outfit tows toward it.
+          Large flat amber disc with halo rings + rays for dusk legibility. */}
+      <circle cx={1300} cy={150} r={104} fill="none" stroke={AMBER} strokeOpacity={0.18} strokeWidth={1.5} />
+      <circle cx={1300} cy={150} r={78} fill="none" stroke={AMBER} strokeOpacity={0.35} strokeWidth={1.5} />
+      <g stroke={AMBER} strokeOpacity={0.7} strokeWidth={3} strokeLinecap="round">
+        {Array.from({ length: 12 }).map((_, i) => {
+          const a = (i * Math.PI) / 6;
+          const x1 = 1300 + Math.cos(a) * 72;
+          const y1 = 150 + Math.sin(a) * 72;
+          const x2 = 1300 + Math.cos(a) * 88;
+          const y2 = 150 + Math.sin(a) * 88;
+          return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} />;
+        })}
+      </g>
+      <circle cx={1300} cy={150} r={58} fill={AMBER} />
+      <circle cx={1300} cy={150} r={58} fill="none" stroke={SAND} strokeOpacity={0.5} strokeWidth={2} />
       {/* birds heading home, same direction as the outfit */}
       <g stroke={SAND} strokeOpacity={0.6} strokeWidth={2.2} fill="none" strokeLinecap="round">
         <path d="M920,110 q10,-10 20,0 q10,-10 20,0" />
@@ -370,17 +386,23 @@ export function DriveScene({ progress }: { progress?: MotionValue<number> }) {
       <line x1={0} y1={472} x2={1440} y2={472} stroke={SAND} strokeOpacity={0.85} strokeWidth={3} />
       <line x1={0} y1={522} x2={1440} y2={522} stroke={SAND} strokeOpacity={0.8} strokeWidth={3} strokeDasharray="34 26" />
 
-      {/* the hidden line: sits right of the starting van, fully covered as it
-          passes over, uncovered as the rear bumper clears — paper on tarmac */}
+      {/* the hidden line: centred on the road, paper-white for dusk legibility.
+          Painted BEFORE the convoy so the outfit passes OVER it — covered as
+          the van reaches centre, uncovered as the rear bumper clears, then it
+          remains for the rest of the pin. */}
       <motion.text
-        x={820}
-        y={490}
-        fontSize={40}
+        x={720}
+        y={512}
+        textAnchor="middle"
+        fontSize={44}
         fontStyle="italic"
         fontFamily="'Cormorant Garamond', Georgia, serif"
         fontWeight={600}
         letterSpacing={1}
-        fill="#F8F7F2"
+        fill="#FFFFFF"
+        stroke="#0C1712"
+        strokeWidth={0.5}
+        paintOrder="stroke"
         style={{ opacity: phraseOpacity }}
       >
         Tow out at golden hour.

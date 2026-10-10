@@ -20,7 +20,10 @@ export function isAvailable(
   existing: Interval[],
   bufferDays = PREP_BUFFER_DAYS
 ): { ok: boolean; conflict?: Interval } {
-  const req = withBuffer(requested, 0); // buffer already baked into existing
+  // Two-sided prep buffer: each stay occupies [start, end + buffer).
+  // Buffer the request as well so a request ending where another begins
+  // (its own prep day colliding) is correctly rejected.
+  const req = withBuffer(requested, bufferDays);
   for (const e of existing) {
     const booked = withBuffer(e, bufferDays);
     if (overlaps(req, booked)) return { ok: false, conflict: e };
@@ -39,8 +42,12 @@ export function validateStay(
   if (nights > opts.maxNights) return `Maximum stay is ${opts.maxNights} nights for this caravan.`;
   const now = opts.now ?? new Date();
   if (opts.minNoticeDays) {
-    const notice = (pickup.getTime() - now.getTime()) / 86400000;
-    if (notice < opts.minNoticeDays) return `Please allow at least ${opts.minNoticeDays} days' notice before collection.`;
+    // Calendar-day notice: compare date-only (UTC midnight) so an evening
+    // booking 2 calendar days out is not rejected for being <48h away.
+    const pickupDay = Date.UTC(pickup.getUTCFullYear(), pickup.getUTCMonth(), pickup.getUTCDate());
+    const nowDay = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+    const noticeDays = Math.round((pickupDay - nowDay) / 86400000);
+    if (noticeDays < opts.minNoticeDays) return `Please allow at least ${opts.minNoticeDays} days' notice before collection.`;
   }
   if (opts.earliest && pickup < opts.earliest) return "Pickup is before the earliest bookable date.";
   if (opts.latest && ret > opts.latest) return "Return is beyond the maximum advance booking window.";

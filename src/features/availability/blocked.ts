@@ -37,7 +37,7 @@ export async function getBlockedNights(slug: string): Promise<{
     const end = addDays(iv.end, PREP_BUFFER_DAYS);
     let cur = new Date(iv.start);
     let guard = 0;
-    while (cur < end && guard++ < 120) {
+    while (cur < end && guard++ < 366) {
       nights.add(toISODate(cur));
       cur = addDays(cur, 1);
     }

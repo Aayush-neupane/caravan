@@ -21,16 +21,19 @@ export type BookingStatus = (typeof BOOKING_STATUSES)[number];
 const TRANSITIONS: Record<BookingStatus, BookingStatus[]> = {
   draft: ["held", "expired", "cancelled"],
   held: ["awaiting_payment", "expired", "cancelled"],
-  awaiting_payment: ["awaiting_documents", "confirmed", "payment_review", "expired", "cancelled"],
+  // Doc gate enforced: payment must go through document review.
+  // Direct awaiting_payment → confirmed removed (was a staff bypass).
+  awaiting_payment: ["awaiting_documents", "payment_review", "expired", "cancelled"],
   awaiting_documents: ["confirmed", "cancelled", "expired"],
   confirmed: ["ready", "cancel_requested", "cancelled"],
-  ready: ["active", "cancelled"],
+  ready: ["active", "cancel_requested", "cancelled"],
   active: ["completed", "cancelled"],
   completed: [],
   cancel_requested: ["cancelled", "confirmed"],
   cancelled: [],
   expired: [],
-  payment_review: ["awaiting_payment", "confirmed", "cancelled"],
+  // Successful retry from review lands back in document review.
+  payment_review: ["awaiting_payment", "awaiting_documents", "confirmed", "cancelled"],
 };
 
 export function canTransition(from: BookingStatus, to: BookingStatus): boolean {

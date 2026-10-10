@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { DESTINATIONS, CARAVANS } from "@/data/catalogue";
 import { FleetCard } from "@/components/fleet/FleetCard";
+import { RouteDraw } from "@/components/editorial/RouteDraw";
 
 export async function generateStaticParams() {
   return DESTINATIONS.map((d) => ({ slug: d.slug }));
@@ -30,17 +31,7 @@ export default function DestinationDetail({ params }: { params: { slug: string }
       <div className="mx-auto grid max-w-wide gap-10 px-5 py-12 sm:px-8 lg:grid-cols-12">
         <div className="lg:col-span-7">
           <h2 className="font-display text-3xl">The route, stop by stop</h2>
-          <ol className="mt-6 space-y-0 border-t border-border">
-            {d.stops.map((s, i) => (
-              <li key={s.name} className="grid gap-2 border-b border-border py-5 sm:grid-cols-12">
-                <span className="font-display text-3xl text-amberDark sm:col-span-2">0{i + 1}</span>
-                <div className="sm:col-span-10">
-                  <p className="font-semibold text-charcoal">{s.name}</p>
-                  <p className="mt-1 leading-relaxed text-charcoal/85">{s.note}</p>
-                </div>
-              </li>
-            ))}
-          </ol>
+          <RouteDraw stops={d.stops} />
           <h2 className="mt-8 font-display text-3xl">Season &amp; practical notes</h2>
           <p className="mt-3 leading-relaxed text-charcoal/85"><strong>When:</strong> {d.season}</p>
           <p className="mt-2 leading-relaxed text-charcoal/85">{d.practical}</p>

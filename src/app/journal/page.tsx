@@ -21,9 +21,11 @@ export default function JournalPage({ searchParams }: { searchParams: { cat?: st
         </div>
         <div className="mt-8 grid gap-6 md:grid-cols-3">
           {list.map((j) => (
-            <article key={j.slug} className="border border-border bg-white" style={{ borderRadius: 10 }}>
+            <article key={j.slug} className="group border border-border bg-white transition-colors hover:border-forest/50" style={{ borderRadius: 10 }}>
+              <Link href={`/journal/${j.slug}`} className="block overflow-hidden" style={{ borderRadius: "10px 10px 0 0" }} aria-label={j.title}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={j.heroImage} alt="" className="aspect-[16/10] w-full object-cover" style={{ borderRadius: "10px 10px 0 0" }} loading="lazy" />
+              <img src={j.heroImage} alt="" className="aspect-[16/10] w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]" loading="lazy" />
+              </Link>
               <div className="p-5">
                 <p className="tick-label">{j.category}</p>
                 <h2 className="mt-2 font-display text-2xl leading-tight"><Link href={`/journal/${j.slug}`} className="hover:text-forest">{j.title}</Link></h2>

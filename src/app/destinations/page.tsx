@@ -15,8 +15,10 @@ export default function DestinationsPage() {
           {DESTINATIONS.map((d) => (
             <article key={d.slug} className="grid gap-6 border-t border-border pt-8 lg:grid-cols-12">
               <div className="lg:col-span-5">
+                <Link href={`/destinations/${d.slug}`} className="block overflow-hidden" style={{ borderRadius: 10 }} aria-label={`Read the ${d.name} itinerary`}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={d.heroImage} alt={`${d.name}`} className="aspect-[16/10] w-full object-cover" style={{ borderRadius: 10 }} loading="lazy" />
+                <img src={d.heroImage} alt={`${d.name}`} className="aspect-[16/10] w-full object-cover transition-transform duration-500 hover:scale-[1.04]" loading="lazy" />
+                </Link>
               </div>
               <div className="lg:col-span-6 lg:col-start-7">
                 <p className="tick-label">{d.duration} · c. {d.distanceMi} miles</p>

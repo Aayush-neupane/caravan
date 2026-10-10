@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { CARAVANS, EXTRAS } from "@/data/catalogue";
 import { gbp } from "@/lib/format";
 import { CaravanBookingWidget } from "./widget";
+import { Lightbox } from "@/components/fleet/Lightbox";
 
 export async function generateStaticParams() {
   return CARAVANS.map((c) => ({ slug: c.slug }));
@@ -40,18 +41,9 @@ export default function CaravanDetail({ params, searchParams }: { params: { slug
           </div>
         </div>
 
-        {/* Gallery: large feature + supporting */}
-        <div className="mt-8 grid gap-4 lg:grid-cols-12">
-          <div className="lg:col-span-8">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={c.images[0].url} alt={c.images[0].alt} className="aspect-[16/10] w-full object-cover" style={{ borderRadius: 10 }} />
-          </div>
-          <div className="grid grid-cols-2 gap-4 lg:col-span-4 lg:grid-cols-1">
-            {c.images.slice(1, 3).map((im) => (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img key={im.url} src={im.url.replace("w=1600", "w=800")} alt={im.alt} className="aspect-[16/10] w-full object-cover lg:aspect-[16/9]" style={{ borderRadius: 8 }} loading="lazy" />
-            ))}
-          </div>
+        {/* Gallery with full-screen viewer */}
+        <div className="mt-8">
+          <Lightbox images={c.images} name={c.name} />
         </div>
         <div className="mt-4 grid gap-4 sm:grid-cols-3">
           {c.images.slice(3).map((im) => (

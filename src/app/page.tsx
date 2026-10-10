@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { BookingSearchPanel } from "@/components/brand/BookingSearchPanel";
 import { Reveal, SectionHeading } from "@/components/editorial/Reveal";
+import { HeroImage } from "@/components/editorial/HeroImage";
 import { FleetCard } from "@/components/fleet/FleetCard";
 import { CARAVANS, DESTINATIONS } from "@/data/catalogue";
 import { gbp } from "@/lib/format";
@@ -26,12 +27,9 @@ export default function HomePage() {
       {/* 1 — Cinematic hero with solid booking panel */}
       <section className="relative bg-forest text-paper" aria-label="Introduction">
         <div className="absolute inset-0 overflow-hidden" aria-hidden="true">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <HeroImage
             src="https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?auto=format&fit=crop&w=2200&q=75"
             alt=""
-            className="h-full w-full object-cover opacity-90"
-            loading="eager"
           />
           <div className="absolute inset-0" style={{ background: "rgba(18,32,25,0.55)" }} />
         </div>

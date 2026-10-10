@@ -25,7 +25,7 @@ type FlowQuote = {
   securityDepositPence: number;
 } | null;
 
-const STEPS = ["Dates & caravan", "Extras & eligibility", "Details & payment"];
+const STEPS = ["Dates & caravan", "Extras & contact", "Review & reserve"];
 
 function Morph({ value, className }: { value: string; className?: string }) {
   return (
@@ -66,8 +66,8 @@ function Breakdown({ quote }: { quote: Exclude<FlowQuote, null> }) {
         <div key={k} className="flex justify-between gap-3"><dt className="text-muted">{k}</dt><dd className="whitespace-nowrap font-medium">{v}</dd></div>
       ))}
       <div className="flex justify-between border-t border-border pt-2 text-base font-bold"><dt>Total</dt><dd><Morph value={gbp(quote.totalPence)} /></dd></div>
-      <div className="flex justify-between"><dt className="text-muted">Due today (25% deposit)</dt><dd className="font-bold text-forest"><Morph value={gbp(quote.depositDuePence)} /></dd></div>
-      <div className="flex justify-between text-[0.85rem]"><dt className="text-muted">Later (balance)</dt><dd>{gbp(quote.balancePence)}</dd></div>
+      <div className="flex justify-between"><dt className="text-muted">Due at the depot (25% deposit)</dt><dd className="font-bold text-forest"><Morph value={gbp(quote.depositDuePence)} /></dd></div>
+      <div className="flex justify-between text-[0.85rem]"><dt className="text-muted">Balance at collection</dt><dd>{gbp(quote.balancePence)}</dd></div>
       <div className="flex justify-between text-[0.85rem]"><dt className="text-muted">Refundable security deposit (separate)</dt><dd>{gbp(quote.securityDepositPence)}</dd></div>
     </dl>
   );
@@ -135,13 +135,16 @@ export function BookingFlow({ initial, caravans = CARAVANS }: { initial: Record<
 
   function go(n: number) { setDir(n > step ? 1 : -1); setStep(n); }
 
-  async function placeBooking(paySucceed: boolean) {
+  // Online step ends at reservation: no payment is taken here. The guest
+  // gets a collection voucher (reference) and settles at the depot counter,
+  // where staff check physical documents and approve the handover.
+  async function placeBooking() {
     setPlacing(true); setError(null);
     try {
-      // Re-quote immediately before charging so the deposit button label
-      // cannot go stale between step 2 and payment.
+      // Re-quote immediately before reserving so the voucher totals cannot
+      // go stale between step 2 and submitting.
       const fresh = await refreshQuote(extrasList, coupon);
-      if (!fresh) throw new Error("Price changed — please review the new total before paying.");
+      if (!fresh) throw new Error("Price changed — please review the new total before reserving.");
       const r = await fetch("/api/bookings", {
         method: "POST", headers: { "content-type": "application/json", "x-idempotency-key": idemRef.current! },
         body: JSON.stringify({
@@ -154,9 +157,6 @@ export function BookingFlow({ initial, caravans = CARAVANS }: { initial: Record<
       });
       const j = await r.json();
       if (!r.ok) throw new Error(j.error ?? "Booking failed");
-      const p = await fetch("/api/payments/demo", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ bookingId: j.id, succeed: paySucceed }) });
-      const pj = await p.json();
-      if (!pj.ok) throw new Error(pj.message ?? pj.error ?? "Payment failed");
       setDone({ reference: j.reference, deposit: gbp(j.depositDuePence), total: gbp(j.totalPence) });
     } catch (e) { setError(e instanceof Error ? e.message : "Booking failed"); } finally { setPlacing(false); }
   }
@@ -218,7 +218,7 @@ export function BookingFlow({ initial, caravans = CARAVANS }: { initial: Record<
       )}
 
       {step === 1 && (
-        <section className="mt-6 grid gap-6 lg:grid-cols-12" aria-label="Step 2: extras and eligibility">
+        <section className="mt-6 grid gap-6 lg:grid-cols-12" aria-label="Step 2: extras and contact">
           <div className="border border-border bg-white p-6 lg:col-span-7" style={{ borderRadius: 10 }}>
             <h2 className="font-display text-2xl">Extras <span className="font-sans text-[0.8rem] font-normal text-muted">— priced live below</span></h2>
             <ul className="mt-4 divide-y divide-border border-y border-border">
@@ -251,14 +251,14 @@ export function BookingFlow({ initial, caravans = CARAVANS }: { initial: Record<
               <div><label className="field-label" htmlFor="b-make">Tow car make *</label><input id="b-make" className="field-input" value={towMake} onChange={(e) => setTowMake(e.target.value)} placeholder="e.g. Volvo" /></div>
               <div><label className="field-label" htmlFor="b-model">Tow car model *</label><input id="b-model" className="field-input" value={towModel} onChange={(e) => setTowModel(e.target.value)} placeholder="e.g. XC60 D5" /></div>
             </div>
-            <p className="mt-3 text-[0.85rem] text-muted">Eligibility is verified by staff after document review — this form never grants it. See the <a href="/towing-guide" className="underline">towing guide</a>.</p>
+            <p className="mt-3 text-[0.85rem] text-muted">Licence and tow-car match are checked by staff at the depot counter — this form never grants them. See the <a href="/towing-guide" className="underline">towing guide</a>.</p>
             <div className="mt-5 flex gap-3">
               <button type="button" onClick={() => go(0)} className="btn-secondary">← Back</button>
               <button type="button" onClick={async () => {
                 if (!driverName || !towMake || !towModel) { setError("Please give the driver name and tow car make/model."); return; }
                 const ok = await refreshQuote(extrasList, coupon);
                 if (ok) go(2);
-              }} disabled={checking} className="btn-primary">Continue to details →</button>
+              }} disabled={checking} className="btn-primary">Continue to review →</button>
             </div>
             {error && <p role="alert" className="field-error">{error}</p>}
           </div>
@@ -277,7 +277,7 @@ export function BookingFlow({ initial, caravans = CARAVANS }: { initial: Record<
       )}
 
       {step === 2 && !done && (
-        <section className="mt-6 grid gap-6 lg:grid-cols-12" aria-label="Step 3: details and payment">
+        <section className="mt-6 grid gap-6 lg:grid-cols-12" aria-label="Step 3: review and reserve">
           <div className="border border-border bg-white p-6 lg:col-span-7" style={{ borderRadius: 10 }}>
             <h2 className="font-display text-2xl">Contact details</h2>
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -295,52 +295,52 @@ export function BookingFlow({ initial, caravans = CARAVANS }: { initial: Record<
             </label>
             {error && <p role="alert" className="field-error">{error}</p>}
             <div className="mt-5 border-t border-border pt-4">
-              <p className="tick-label">Payment — clearly labelled demo mode (no real charge)</p>
+              <p className="tick-label">Reserve — nothing is charged online</p>
               <div className="mt-3 flex flex-wrap gap-3">
-                <button type="button" disabled={placing} onClick={() => { if (!name || !email || !phone || !agree) { setError("Please complete name, email, phone and accept the agreement."); return; } void placeBooking(true); }} className="btn-primary">{placing ? "Processing…" : `Pay deposit ${quote ? gbp(quote.depositDuePence) : ""} (demo success)`}</button>
-                <button type="button" disabled={placing} onClick={() => { if (!name || !email || !phone || !agree) { setError("Please complete name, email, phone and accept the agreement."); return; } void placeBooking(false); }} className="btn-secondary">Simulate failed payment</button>
+                <button type="button" disabled={placing} onClick={() => { if (!name || !email || !phone || !agree) { setError("Please complete name, email, phone and accept the agreement."); return; } void placeBooking(); }} className="btn-primary">{placing ? "Reserving…" : "Reserve caravan — get collection voucher"}</button>
               </div>
               <button type="button" onClick={() => go(1)} className="mt-3 text-[0.85rem] font-semibold text-forest underline">← Back to extras</button>
             </div>
           </div>
           <aside className="lg:col-span-5">
             <div className="border border-border bg-sand/60 p-6 lg:sticky lg:top-24" style={{ borderRadius: 10 }}>
-              <p className="tick-label">Review before paying</p>
+              <p className="tick-label">Review before reserving</p>
               <p className="mt-2 font-display text-2xl">{caravan.name} · {pickup} → {ret}</p>
               <p className="text-[0.85rem] text-muted">{driverName} · {towMake} {towModel} · {travellers} travellers</p>
               <div className="mt-3 bg-white p-4" style={{ borderRadius: 8 }}>
                 {quote ? <Breakdown quote={quote} /> : <p className="text-[0.88rem] text-muted">No price yet — go back and check availability.</p>}
               </div>
-              <p className="mt-3 text-[0.8rem] text-muted">Payment verified server-side. A success-looking page alone never confirms a booking — only a verified payment event does.</p>
+              <p className="mt-3 text-[0.8rem] text-muted">Nothing is charged online. You reserve now, then pay and show documents at the depot counter.</p>
             </div>
           </aside>
         </section>
       )}
 
       {done && (
-        <section className="mt-6 overflow-hidden border border-border bg-white" style={{ borderRadius: 10 }} role="status" aria-label="Booking confirmed">
+        <section className="mt-6 overflow-hidden border border-border bg-white" style={{ borderRadius: 10 }} role="status" aria-label="Collection voucher">
           <div className="bg-forest px-6 py-5 text-paper sm:px-8">
-            <p className="tick-label !text-sand/70">Reservation created · demo payment</p>
-            <h2 className="mt-1 font-display text-4xl">Thank you — you are booked.</h2>
+            <p className="tick-label !text-sand/70">Reservation held · nothing charged</p>
+            <h2 className="mt-1 font-display text-4xl">Your collection voucher.</h2>
           </div>
           <div className="grid gap-0 sm:grid-cols-[1fr_auto_1fr] sm:items-stretch">
             <div className="p-6 sm:px-8">
-              <p className="tick-label">Booking reference</p>
+              <p className="tick-label">Show this at the depot</p>
               <p className="mt-1 font-mono text-3xl font-bold tracking-wider text-forest">{done.reference}</p>
               <div className="mt-3 max-w-[10rem]" aria-hidden="true"><MiniOutfit flag /></div>
-              <p className="mt-1 font-mono text-[0.68rem] font-bold uppercase tracking-[0.18em] text-success">✓ Arrived — see you at the depot</p>
-              <p className="mt-3 text-[0.92rem] leading-relaxed text-charcoal/85">Deposit {done.deposit} recorded as a labelled demo payment (no real money moved). Total {done.total} incl. VAT.</p>
+              <p className="mt-1 font-mono text-[0.68rem] font-bold uppercase tracking-[0.18em] text-success">✓ Reserved — see you at the depot</p>
+              <p className="mt-3 text-[0.92rem] leading-relaxed text-charcoal/85">Total {done.total} incl. VAT · {done.deposit} deposit due at the counter. Nothing has been charged.</p>
+              <button type="button" onClick={() => window.print()} className="btn-secondary mt-4">Print voucher</button>
             </div>
             <div className="hidden border-l-2 border-dashed border-border sm:block" aria-hidden="true" />
             <div className="border-t-2 border-dashed border-border p-6 sm:border-t-0 sm:px-8">
-              <p className="tick-label">Next steps</p>
+              <p className="tick-label">At the counter, bring</p>
               <ol className="mt-2 list-decimal space-y-1.5 pl-5 text-[0.9rem] text-charcoal/85">
-                <li>Upload your driving licence via your account.</li>
-                <li>Watch for the collection email 7 days before.</li>
+                <li>This reference ({done.reference}) — on paper or phone.</li>
+                <li>Your driving licence + tow-car documents.</li>
                 <li>Arrive 15 minutes early at Lansdown Depot.</li>
               </ol>
               <div className="mt-4 flex flex-wrap gap-3">
-                <a href={`/account?email=${encodeURIComponent(email)}&reference=${done.reference}`} className="btn-primary">View in account</a>
+                <a href={`/account?email=${encodeURIComponent(email)}&reference=${done.reference}`} className="btn-primary">Find my reservation</a>
                 <button type="button" className="btn-secondary" onClick={() => { setDone(null); go(0); }}>New booking</button>
               </div>
             </div>

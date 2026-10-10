@@ -20,7 +20,9 @@ export type BookingStatus = (typeof BOOKING_STATUSES)[number];
 
 const TRANSITIONS: Record<BookingStatus, BookingStatus[]> = {
   draft: ["held", "expired", "cancelled"],
-  held: ["awaiting_payment", "expired", "cancelled"],
+  // Online reservations are held until the depot counter: staff approve the
+  // handover (physical documents checked) → active, or decline → cancelled.
+  held: ["active", "expired", "cancelled"],
   // Doc gate enforced: payment must go through document review.
   // Direct awaiting_payment → confirmed removed (was a staff bypass).
   awaiting_payment: ["awaiting_documents", "payment_review", "expired", "cancelled"],

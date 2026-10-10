@@ -4,7 +4,7 @@ import { z } from "zod";
 import { authOptions, can } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { cleanText, gateMutation } from "@/lib/security";
-import { mdOverlap, isMonthDay } from "../route";
+import { mdOverlap, isMonthDay } from "@/lib/monthday";
 
 const MD = z.string().regex(/^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/, "Use MM-DD.");
 

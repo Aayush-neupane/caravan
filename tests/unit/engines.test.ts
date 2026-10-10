@@ -114,7 +114,9 @@ describe("availability engine", () => {
 
 describe("booking state machine", () => {
   it("allows legal transitions", () => {
-    expect(canTransition("held", "awaiting_payment")).toBe(true);
+    // Online reservations sit held until the depot counter approves them.
+    expect(canTransition("held", "active")).toBe(true);
+    expect(canTransition("held", "cancelled")).toBe(true);
     expect(canTransition("awaiting_payment", "awaiting_documents")).toBe(true);
     expect(canTransition("confirmed", "ready")).toBe(true);
   });

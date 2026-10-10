@@ -48,11 +48,11 @@ export async function sendNotification(opts: {
   }
 }
 
-export function bookingEmailBodies(ref: string, caravan: string, pickup: string, ret: string) {
+export function bookingEmailBodies(ref: string, caravan: string, pickup: string, ret: string, total: string) {
   return {
-    confirmation: `Your Hartley & Moor reservation ${ref} (${caravan}, ${pickup} → ${ret}) is confirmed. Collection details follow under separate cover. Reply to this email with any question.`,
+    confirmation: `Your Hartley & Moor collection voucher ${ref} (${caravan}, ${pickup} → ${ret}, total ${total} incl. VAT) is reserved. No payment is taken online — show this reference at Lansdown Depot, bring your driving licence and tow-car documents, and arrive 15 minutes early. Our team checks everything with you at the counter and settles payment there.`,
     paymentReceipt: `Payment received for reservation ${ref}. Thank you — your receipt is attached to your account.`,
     collectionReminder: `Reminder: collect ${caravan} for booking ${ref}. Bring your driving licence, tow-car documents, and arrive 15 minutes early for the handover.`,
-    documentRequest: `Booking ${ref} needs a document before we can confirm it. Sign in to upload your driving licence.`,
+    documentRequest: `Booking ${ref}: please bring your driving licence and tow-car documents to the depot counter — our team checks them with you at handover.`,
   };
 }

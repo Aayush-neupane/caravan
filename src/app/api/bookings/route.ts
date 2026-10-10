@@ -31,7 +31,9 @@ const CreateBody = z.object({
   agree: z.literal(true, { errorMap: () => ({ message: "You must accept the rental agreement." }) }),
 }).strict();
 
-// POST /api/bookings — creates hold + booking atomically with revalidated availability.
+// POST /api/bookings — online reservation only. No payment is taken here:
+// the guest receives a collection voucher (reference) and settles + shows
+// physical documents at the depot counter, where staff approve the handover.
 export async function POST(req: Request) {
   const denied = gateMutation(req, "bookings:post", 10, 60_000);
   if (denied) return denied;
@@ -195,7 +197,7 @@ export async function POST(req: Request) {
           pickupDate: pickup,
           returnDate: ret,
           travellers: body.travellers,
-          status: "awaiting_payment",
+          status: "held",
           subtotalPence: quote.rentalSubtotalPence,
           discountPence: quote.weeklyDiscountPence + quote.couponDiscountPence,
           feesPence: quote.feesPence,
@@ -209,7 +211,7 @@ export async function POST(req: Request) {
           quoteSnapshot: JSON.stringify({ ...quote, caravan: caravan.slug, pickup: body.pickup, return: body.return }),
           driver: { create: { fullName: body.customer.driverName, licenceCountry: body.customer.licenceCountry } },
           towVehicle: { create: { make: body.customer.towMake, model: body.customer.towModel } },
-          statusHistory: { create: [{ from: null, to: "awaiting_payment", actor: "customer", note: "Hold created; awaiting payment" }] },
+          statusHistory: { create: [{ from: null, to: "held", actor: "customer", note: "Reserved online; collection voucher issued" }] },
         },
       });
 
@@ -240,8 +242,9 @@ export async function POST(req: Request) {
       return created;
     });
 
-    const bodies = bookingEmailBodies(booking.reference, caravan.name, body.pickup, body.return);
-    await sendNotification({ bookingId: booking.id, kind: "booking_created", to: body.customer.email, subject: `Reservation ${booking.reference} — payment next step`, body: bodies.confirmation }).catch(() => {});
+    const { gbp } = await import("@/lib/format");
+    const bodies = bookingEmailBodies(booking.reference, caravan.name, body.pickup, body.return, gbp(quote.totalPence));
+    await sendNotification({ bookingId: booking.id, kind: "booking_created", to: body.customer.email, subject: `Collection voucher ${booking.reference} — show this at the depot`, body: bodies.confirmation }).catch(() => {});
 
     return NextResponse.json({ id: booking.id, reference: booking.reference, depositDuePence: quote.depositDuePence, totalPence: quote.totalPence, holdExpiresAt: expiresAt.toISOString() }, { status: 201 });
   } catch (e) {

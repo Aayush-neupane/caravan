@@ -45,9 +45,10 @@ export function CinematicHero() {
       return;
     }
     setLeaving(true);
-    // ~6s for a full pin at a reading pace, proportional when part-driven.
+    // ~3s for a full pin at a brisk travelling pace, proportional when
+    // part-driven. Constant velocity — no fast-forward easing.
     const total = el.offsetHeight - window.innerHeight;
-    const dur = Math.min(6000, Math.max(2000, (remaining / Math.max(1, total)) * 6000));
+    const dur = Math.min(3000, Math.max(1200, (remaining / Math.max(1, total)) * 3000));
     const t0 = performance.now();
     const step = (t: number) => {
       const k = Math.min(1, (t - t0) / dur);

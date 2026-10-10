@@ -67,19 +67,34 @@ Notifications · Reports · Settings · Staff & audit.
 ## Production notes
 
 - Database: local dev uses **SQLite** for zero-config runs — no, Postgres is not
-  currently used. The schema uses no provider-specific types, so switching is a
-  two-line change. **Using PostgreSQL** (recommended for production):
+  currently used. An audit of sibling projects (create.io on Prisma + Neon,
+  crystal-cabin on Supabase with a real `appointments` table, Excurion on
+  Supabase with RLS/RPC, shopapp on Prisma + SQLite) converges on one answer:
+  **PostgreSQL is the right database for this booking workload**, and Prisma is
+  already the house ORM. Recommended path is **Neon** (serverless Postgres,
+  generous free tier, works with the existing Prisma schema — same pattern as
+  create.io); **Supabase** is the alternative if you also want its dashboard,
+  auth and storage (same pattern as crystal-cabin/Excurion). SQLite stays for
+  local dev; `localStorage`/JSON/FormSubmit (portfolio, photographer, flexfit)
+  cannot enforce availability or prevent double-booking and must never back
+  reservations.
+  **Switching to managed Postgres** (2 minutes with a connection string):
   ```bash
-  docker compose up -d db
   # in prisma/schema.prisma: provider = "sqlite" → "postgresql"
-  # in .env: DATABASE_URL="postgresql://hartley:hartley@localhost:5432/caravan"
+  # in .env: DATABASE_URL="postgresql://user:password@ep-xyz.neon.tech/neondb?sslmode=require"
   npx prisma migrate deploy
   npm run seed
   ```
-  Managed options that work the same way: Neon, Supabase, RDS. For true
-  exclusion-constraint overlap protection on Postgres, add an
+  Or self-host with the included compose file:
+  ```bash
+  docker compose up -d db
+  # in .env: DATABASE_URL="postgresql://hartley:hartley@localhost:5432/caravan"
+  npx prisma migrate deploy && npm run seed
+  ```
+  For true exclusion-constraint overlap protection on Postgres, add an
   `EXCLUDE USING gist` migration on active bookings (the app additionally
-  guards in-transaction).
+  guards in-transaction). Say the word and the switch gets flipped with a
+  live verification.
 - Storage: local dev keeps document paths as `private://` references. Production
   should use S3-compatible private buckets + signed URLs (see `src/lib/email.ts`
   and `CustomerDocument`); add malware scanning at upload.

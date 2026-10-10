@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { BookingSearchPanel } from "@/components/brand/BookingSearchPanel";
 import { Reveal, SectionHeading } from "@/components/editorial/Reveal";
 import { CinematicHero } from "@/components/editorial/Hero";
-import { ConvoyStrip } from "@/components/editorial/Convoy";
+import { FieldStrip } from "@/components/editorial/FieldStrip";
 import { Framed, RouteDivider, SectionMarker, Stamp, TopoLines } from "@/components/editorial/Decor";
 import { FleetCard } from "@/components/fleet/FleetCard";
 import { CARAVANS, DESTINATIONS } from "@/data/catalogue";
@@ -30,13 +30,13 @@ export default function HomePage() {
       <CinematicHero />
 
       {/* 1b — Expedition permit: booking panel + yard strip */}
-      <section id="permit" className="relative border-b border-border bg-paper" aria-label="Check availability" style={{ scrollMarginTop: "4rem" }}>
-        <div className="mx-auto max-w-wide px-5 sm:px-8">
-          <div className="relative -mt-16 bg-paper p-2 shadow-[0_18px_50px_-20px_rgba(26,43,35,0.35)]" style={{ borderRadius: 12 }}>
+      <section id="permit" className="relative border-y border-border bg-sand/50" aria-label="Check availability" style={{ scrollMarginTop: "4rem" }}>
+        <div className="mx-auto max-w-wide px-5 py-8 sm:px-8">
+          <div className="relative bg-paper p-2 shadow-[0_18px_50px_-20px_rgba(26,43,35,0.35)]" style={{ borderRadius: 12 }}>
             <p className="absolute -top-3 left-4 bg-amber px-2 py-0.5 font-mono text-[0.68rem] font-bold uppercase tracking-[0.14em] text-forest" style={{ borderRadius: 3 }}>Expedition permit — free to check</p>
             <BookingSearchPanel compact />
           </div>
-          <div className="flex flex-wrap gap-x-8 gap-y-1 py-4 font-mono text-[0.7rem] uppercase tracking-[0.16em] text-muted">
+          <div className="flex flex-wrap gap-x-8 gap-y-1 pt-4 font-mono text-[0.7rem] uppercase tracking-[0.16em] text-muted">
             <span>Grid ref ST 726 651 — Lansdown Depot</span>
             <span>51.3811° N, 2.3590° W</span>
             <span className="hidden sm:inline">Season: high summer ×1.2</span>
@@ -45,8 +45,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 1c — The convoy: scroll-driven illustration */}
-      <ConvoyStrip />
+      {/* 1c — The road, in frames */}
+      <FieldStrip />
 
       {/* 2 — Brand promise */}
       <section className="border-b border-border bg-paper">

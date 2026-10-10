@@ -6,6 +6,9 @@ import { Compass } from "@/components/editorial/Decor";
 import { AdminSignOut } from "./signout";
 import { AdminFade } from "./fade";
 
+// Ops dashboards must never serve a stale static snapshot.
+export const dynamic = "force-dynamic";
+
 const GROUPS: { title: string; items: [string, string][] }[] = [
   {
     title: "Operate",

@@ -51,7 +51,7 @@ export function CinematicHero() {
 
   return (
     <div ref={ref} className="relative bg-forest" style={{ height: "240vh" }} aria-label="Introduction">
-      <div className="sticky top-0 flex h-screen flex-col justify-end overflow-hidden">
+      <div className="sticky top-0 flex h-svh flex-col justify-end overflow-hidden">
         <div className="absolute inset-0" aria-hidden="true">
           <DriveScene progress={scrollYProgress} />
         </div>
@@ -62,7 +62,7 @@ export function CinematicHero() {
           <Compass size={24} className="text-sand" />
         </div>
 
-        <div className="relative z-[2] mx-auto flex min-h-screen w-full max-w-wide flex-col justify-center px-5 pb-56 pt-32 sm:px-8">
+        <div className="relative z-[2] mx-auto flex min-h-svh w-full max-w-wide flex-col justify-center px-5 pb-56 pt-32 sm:px-8">
           {copy}
         </div>
 

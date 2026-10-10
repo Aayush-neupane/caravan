@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { priceQuote } from "@/features/pricing/engine";
 import { isAvailable, validateStay } from "@/features/availability/engine";
 import { canTransition } from "@/features/bookings/stateMachine";
+import { otpFor, otpSlot, verifyOtp, OTP_WINDOW_MS } from "@/features/handover/otp";
 
 const base = {
   baseNightlyPence: 10000,
@@ -129,5 +130,25 @@ describe("booking state machine", () => {
   it("blocks illegal transitions (e.g. completed → active)", () => {
     expect(canTransition("completed", "active")).toBe(false);
     expect(canTransition("cancelled", "confirmed")).toBe(false);
+  });
+});
+
+describe("handover OTP", () => {
+  it("issues 6-digit codes deterministically per booking + window", () => {
+    const now = Date.now();
+    const a = otpFor("booking-1", otpSlot(now));
+    expect(a).toMatch(/^\d{6}$/);
+    expect(otpFor("booking-1", otpSlot(now))).toBe(a);
+    expect(otpFor("booking-2", otpSlot(now))).not.toBe(a);
+  });
+  it("verifies current and previous windows, rejects the rest", () => {
+    const now = Date.now();
+    const code = otpFor("booking-9", otpSlot(now));
+    expect(verifyOtp("booking-9", code, now)).toBe(true);
+    expect(verifyOtp("booking-9", code, now + OTP_WINDOW_MS * 0.9)).toBe(true);
+    expect(verifyOtp("booking-9", code, now + OTP_WINDOW_MS * 2.1)).toBe(false);
+    expect(verifyOtp("booking-9", "000000", now)).toBe(code === "000000");
+    expect(verifyOtp("booking-9", "12", now)).toBe(false);
+    expect(verifyOtp("other-booking", code, now)).toBe(false);
   });
 });

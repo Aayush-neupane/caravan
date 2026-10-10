@@ -18,10 +18,9 @@ export function CinematicHero() {
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end end"] });
   const cueOpacity = useTransform(scrollYProgress, [0, 0.18], [1, 0]);
 
-  const copy = (
+  const body = (
     <>
-      <p className={KICKER}>Field log Nº 01 — Bath, Somerset</p>
-      <h1 className="mt-3 max-w-5xl font-display leading-[0.95]" style={{ fontSize: "clamp(3.2rem, 8.5vw, 7rem)", letterSpacing: "-0.015em" }}>
+      <h1 className="mt-3 max-w-5xl font-display leading-[0.95] text-paper" style={{ fontSize: "clamp(3.2rem, 8.5vw, 7rem)", letterSpacing: "-0.015em" }}>
         Leave room for the unexpected<span className="text-amber">.</span>
       </h1>
       <p className="mt-5 max-w-xl text-[1.1rem] leading-relaxed text-paper/85">
@@ -33,8 +32,17 @@ export function CinematicHero() {
           <Link href="#permit" className="btn-primary !border-white/20">Check availability</Link>
           <Link href="/fleet" className="btn-secondary !bg-transparent !text-paper !border-white/40 hover:!border-white">Meet the fleet</Link>
         </div>
-        <p className="font-display text-xl">From {gbp(9500)} <span className="font-sans text-sm text-paper/60">/ night · sleeps 2–4</span></p>
+        <p className="font-display text-xl text-paper">From {gbp(9500)} <span className="font-sans text-sm text-paper/60">/ night · sleeps 2–4</span></p>
       </div>
+    </>
+  );
+
+  // Reduced-motion has no top strip, so it keeps its own kicker line.
+  // The pinned scene shows the kicker in the top strip — body stays single.
+  const copy = (
+    <>
+      <p className={KICKER}>Field log Nº 01 — Bath, Somerset</p>
+      {body}
     </>
   );
 
@@ -50,7 +58,7 @@ export function CinematicHero() {
   }
 
   return (
-    <div ref={ref} className="relative bg-forest" style={{ height: "240vh" }} aria-label="Introduction">
+    <div ref={ref} className="relative bg-forest text-paper" style={{ height: "240vh" }} aria-label="Introduction">
       <div className="sticky top-0 flex h-svh flex-col justify-end overflow-hidden">
         <div className="absolute inset-0" aria-hidden="true">
           <DriveScene progress={scrollYProgress} />
@@ -63,7 +71,7 @@ export function CinematicHero() {
         </div>
 
         <div className="relative z-[2] mx-auto flex min-h-svh w-full max-w-wide flex-col justify-center px-5 pb-56 pt-32 sm:px-8">
-          {copy}
+          {body}
         </div>
 
         <motion.p

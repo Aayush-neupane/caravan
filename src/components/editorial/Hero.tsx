@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import Link from "next/link";
 import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
 import { gbp } from "@/lib/format";
@@ -17,6 +17,41 @@ export function CinematicHero() {
   const reduce = useReducedMotion();
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end end"] });
   const cueOpacity = useTransform(scrollYProgress, [0, 0.18], [1, 0]);
+  const [leaving, setLeaving] = useState(false);
+
+  const go = (href: string) => {
+    if (href.startsWith("#")) {
+      document.querySelector(href)?.scrollIntoView({ behavior: "smooth" });
+    } else {
+      window.location.href = href;
+    }
+  };
+
+  // CTA clicks first play the drive out to the end of the pin, then navigate.
+  // Reduced-motion (or an already-finishing click) keeps default behaviour.
+  function finishAndGo(e: ReactMouseEvent, href: string) {
+    if (reduce || leaving) return;
+    const el = ref.current;
+    if (!el) return;
+    e.preventDefault();
+    const start = window.scrollY;
+    const pinTop = el.getBoundingClientRect().top + start;
+    const target = Math.max(start, pinTop + el.offsetHeight - window.innerHeight);
+    if (target - start < 8) {
+      go(href);
+      return;
+    }
+    setLeaving(true);
+    const dur = 1500;
+    const t0 = performance.now();
+    const step = (t: number) => {
+      const k = Math.min(1, (t - t0) / dur);
+      window.scrollTo(0, start + (target - start) * (1 - Math.pow(1 - k, 3)));
+      if (k < 1) requestAnimationFrame(step);
+      else go(href);
+    };
+    requestAnimationFrame(step);
+  }
 
   const body = (
     <>
@@ -29,8 +64,8 @@ export function CinematicHero() {
       </p>
       <div className="mt-7 flex flex-wrap items-center gap-x-8 gap-y-3">
         <div className="flex flex-wrap gap-3">
-          <Link href="#permit" className="btn-primary !border-white/20">Check availability</Link>
-          <Link href="/fleet" className="btn-secondary !bg-transparent !text-paper !border-white/40 hover:!border-white">Meet the fleet</Link>
+          <Link href="#permit" onClick={(e) => finishAndGo(e, "#permit")} className="btn-primary !border-white/20">Check availability</Link>
+          <Link href="/fleet" onClick={(e) => finishAndGo(e, "/fleet")} className="btn-secondary !bg-transparent !text-paper !border-white/40 hover:!border-white">Meet the fleet</Link>
         </div>
         <p className="font-display text-xl text-paper">From {gbp(9500)} <span className="font-sans text-sm text-paper/60">/ night · sleeps 2–4</span></p>
       </div>

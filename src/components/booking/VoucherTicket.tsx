@@ -22,10 +22,6 @@ function nightsBetween(a: string, b: string): number | null {
   return Math.round(ms / 86400000);
 }
 
-function esc(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-}
-
 // Deterministic faux-barcode widths from the reference (flat divs, no gradients).
 function bars(seed: string, n = 44): number[] {
   const out: number[] = [];
@@ -37,42 +33,155 @@ function bars(seed: string, n = 44): number[] {
   return out;
 }
 
-// Standalone ticket file (inline styles, zero assets): what downloads is
-// exactly the ticket — nothing else on the page.
-function ticketHTML(t: TicketData): string {
-  const n = nightsBetween(t.pickup, t.ret);
-  const w = bars(t.reference);
-  const bar = w.map((x) => `<span style="display:inline-block;width:${x * 2}px;height:44px;background:#1A2B23;margin-right:${x === 1 ? 3 : 2}px"></span>`).join("");
-  const rows: [string, string][] = [
-    ...(t.guestName ? [["Guest", t.guestName] as [string, string]] : []),
-    ["Caravan", t.caravan],
-    ["Pickup", `${day(t.pickup)} · from 09:00`],
-    ["Return", `${day(t.ret)} · by 16:00`],
-    ...(n ? [["Nights", String(n)] as [string, string]] : []),
-    ["Total incl. VAT", gbp(t.totalPence)],
-    ["Deposit due at depot", gbp(t.depositDuePence)],
+const INK = "#1A2B23";
+const PAPER = "#F8F7F2";
+const SAND = "#EDE6D6";
+const AMBER = "#C9A86A";
+const MUTED = "#686B65";
+const DISPLAY = '"Cormorant Garamond", Georgia, serif';
+const MONO = 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
+
+// PNG export drawn straight to canvas — crisp at any size, zero assets, and
+// exactly the ticket (never the page). 1200px wide, ~2x of the on-screen card.
+function renderTicketPNG(t: TicketData): HTMLCanvasElement {
+  const W = 1200;
+  const H = 1120;
+  const M = 56; // outer margin
+  const canvas = document.createElement("canvas");
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext("2d")!;
+  const stamp = t.status === "active" ? "COLLECTED" : t.status === "cancelled" ? "CANCELLED" : "RESERVED";
+  const nights = nightsBetween(t.pickup, t.ret);
+
+  ctx.fillStyle = PAPER;
+  ctx.fillRect(0, 0, W, H);
+
+  const cardX = M;
+  const cardW = W - M * 2;
+  const rr = (x: number, y: number, w: number, h: number, r: number) => {
+    ctx.beginPath();
+    if (typeof ctx.roundRect === "function") ctx.roundRect(x, y, w, h, r);
+    else ctx.rect(x, y, w, h);
+  };
+
+  // Card body
+  rr(cardX, M, cardW, H - M * 2, 24);
+  ctx.fillStyle = "#FFFFFF";
+  ctx.fill();
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = INK;
+  ctx.stroke();
+  ctx.save();
+  rr(cardX, M, cardW, H - M * 2, 24);
+  ctx.clip();
+
+  // Masthead
+  ctx.fillStyle = INK;
+  ctx.fillRect(cardX, M, cardW, 132);
+  ctx.fillStyle = SAND;
+  ctx.font = `700 24px ${MONO}`;
+  ctx.textBaseline = "alphabetic";
+  ctx.fillText("HARTLEY & MOOR · COLLECTION VOUCHER", cardX + 40, M + 80);
+  // Stamp
+  ctx.save();
+  ctx.translate(cardX + cardW - 150, M + 66);
+  ctx.rotate(-0.05);
+  ctx.font = `700 24px ${MONO}`;
+  const sw = ctx.measureText(stamp).width + 36;
+  ctx.strokeStyle = AMBER;
+  ctx.lineWidth = 3;
+  ctx.strokeRect(-sw / 2, -30, sw, 56);
+  ctx.fillStyle = AMBER;
+  ctx.textAlign = "center";
+  ctx.fillText(stamp, 0, 8);
+  ctx.restore();
+  ctx.textAlign = "left";
+
+  let y = M + 132 + 72;
+  const lx = cardX + 40;
+  // Reference
+  ctx.fillStyle = INK;
+  ctx.font = `700 88px ${MONO}`;
+  ctx.fillText(t.reference, lx, y);
+  y += 40;
+  ctx.fillStyle = MUTED;
+  ctx.font = `700 21px ${MONO}`;
+  ctx.fillText("SHOW THIS AT LANSDOWN DEPOT, BATH", lx, y);
+  y += 64;
+  // Caravan + route
+  ctx.fillStyle = INK;
+  ctx.font = `600 56px ${DISPLAY}`;
+  ctx.fillText(t.caravan, lx, y);
+  y += 62;
+  ctx.font = `500 42px ${DISPLAY}`;
+  ctx.fillText(`${day(t.pickup)}  →  ${day(t.ret)}${nights ? `  ·  ${nights} night${nights === 1 ? "" : "s"}` : ""}`, lx, y);
+  y += 40;
+  if (t.guestName) {
+    ctx.fillStyle = MUTED;
+    ctx.font = `400 28px ${DISPLAY}`;
+    ctx.fillText(`Booked for ${t.guestName}`, lx, y);
+    y += 44;
+  } else {
+    y += 8;
+  }
+  // Totals
+  ctx.fillStyle = MUTED;
+  ctx.font = `700 19px ${MONO}`;
+  ctx.fillText("TOTAL INCL. VAT", lx, y);
+  ctx.fillText("DEPOSIT · DUE AT DEPOT", lx + 520, y);
+  y += 56;
+  ctx.fillStyle = INK;
+  ctx.font = `700 60px ${DISPLAY}`;
+  ctx.fillText(gbp(t.totalPence), lx, y);
+  ctx.fillText(gbp(t.depositDuePence), lx + 520, y);
+  y += 44;
+  // Perforation
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 3;
+  ctx.setLineDash([16, 12]);
+  ctx.beginPath();
+  ctx.moveTo(cardX, y);
+  ctx.lineTo(cardX + cardW, y);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  y += 48;
+  // Barcode
+  let bx = lx;
+  for (const w of bars(t.reference)) {
+    ctx.fillStyle = INK;
+    ctx.fillRect(bx, y, w * 2.4, 84);
+    bx += w * 2.4 + (w === 1 ? 4 : 3);
+  }
+  y += 84 + 30;
+  // Checklist
+  ctx.fillStyle = "#333b36";
+  ctx.font = `400 27px ${DISPLAY}`;
+  const lines = [
+    `This reference (${t.reference}) — file, paper or phone.`,
+    "Your driving licence + tow-car documents.",
+    "Arrive 15 minutes early, Mon–Sat 09:00–16:00.",
   ];
-  return `<!DOCTYPE html><html lang="en-GB"><head><meta charset="utf-8"><title>Collection voucher ${esc(t.reference)} — Hartley & Moor</title>
-<style>body{font-family:Georgia,serif;background:#F8F7F2;color:#1A2B23;margin:0;padding:32px}.t{max-width:600px;margin:0 auto;border:2px solid #1A2B23;border-radius:12px;overflow:hidden;background:#fff}.h{background:#1A2B23;color:#F8F7F2;padding:18px 24px;display:flex;justify-content:space-between;align-items:center}.h p{font-family:monospace;font-size:11px;letter-spacing:2px;color:#EDE6D6;margin:0}.stamp{font-family:monospace;font-size:11px;font-weight:bold;letter-spacing:2px;color:#C9A86A;border:2px solid #C9A86A;border-radius:4px;padding:4px 10px;transform:rotate(-3deg)}.ref{font-family:monospace;font-size:36px;font-weight:bold;letter-spacing:4px;margin:20px 24px 2px}.sub{font-family:monospace;font-size:11px;letter-spacing:2px;color:#686B65;margin:0 24px}table{width:100%;border-collapse:collapse;margin:10px 0 0}td{padding:7px 24px;font-size:14px;border-top:1px solid #DCDDD5}td:first-child{color:#686B65;width:42%}.perf{border-top:2px dashed #1A2B23;margin:18px 0 0}.stub{padding:14px 24px 20px}.bars{white-space:nowrap;overflow:hidden}.foot{margin:14px auto;max-width:600px;font-family:monospace;font-size:11px;letter-spacing:1px;color:#686B65;text-align:center}ul{margin:10px 0 0;padding-left:20px;font-size:14px;line-height:1.7}</style>
-</head><body><div class="t"><div class="h"><p>HARTLEY &amp; MOOR · COLLECTION VOUCHER</p><span class="stamp">RESERVED</span></div>
-<div class="ref">${esc(t.reference)}</div>
-<p class="sub">SHOW THIS AT LANSDOWN DEPOT, BATH</p>
-<table>${rows.map(([k, v]) => `<tr><td>${esc(k)}</td><td><strong>${esc(v)}</strong></td></tr>`).join("")}</table>
-<div class="perf"></div><div class="stub"><div class="bars">${bar}</div>
-<ul><li>Show this reference at the depot counter.</li><li>Bring your driving licence + tow-car documents.</li><li>Arrive 15 minutes early, Mon–Sat 09:00–16:00.</li></ul></div></div>
-<p class="foot">Nothing is charged online · depot phone +44 1225 555 014</p></body></html>`;
+  for (const [i, line] of lines.entries()) {
+    ctx.fillText(`${i + 1}.  ${line}`, lx, y);
+    y += 44;
+  }
+  ctx.restore();
+  return canvas;
 }
 
 export function downloadTicket(t: TicketData): void {
-  const blob = new Blob([ticketHTML(t)], { type: "text/html;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `voucher-${t.reference}.html`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 4000);
+  renderTicketPNG(t).toBlob((blob) => {
+    if (!blob) return;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `voucher-${t.reference}.png`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+  }, "image/png");
 }
 
 function Barcode({ seed }: { seed: string }) {

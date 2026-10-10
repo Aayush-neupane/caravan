@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { EmptyState, Panel } from "@/components/admin/ui";
 import { StatusBadge } from "@/components/admin/ui";
+import { ManualBookingForm } from "./manual";
 
 export const metadata = { title: "Fleet calendar", robots: { index: false, follow: false } };
 
@@ -20,6 +21,18 @@ export default async function CalendarPage() {
       <p className="tick-label">Occupancy · pickup-inclusive, return-exclusive + 1-day buffer</p>
       <h1 className="mt-1 font-display text-4xl text-charcoal sm:text-5xl">Fleet calendar</h1>
       <p className="mt-2 max-w-2xl text-[0.9rem] text-muted">Maintenance blocks affect availability and are flagged against confirmed reservations — never silently double-booked. Date moves happen via explicit edits so every change passes server validation.</p>
+
+      <div className="mt-5 border border-border bg-white px-5 py-4" style={{ borderRadius: 10 }}>
+        <h2 className="font-display text-xl">New manual booking <span className="font-sans text-[0.78rem] font-normal text-muted">— walk-ins &amp; phone, same availability guard, audit-logged</span></h2>
+        <div className="mt-3">
+          {caravans.length === 0 ? (
+            <EmptyState title="No fleet records" body="Run the seed to load caravans before taking manual bookings." />
+          ) : (
+            <ManualBookingForm vans={caravans.map((c) => ({ slug: c.slug, name: c.name }))} />
+          )}
+        </div>
+      </div>
+
       <div className="mt-5 space-y-4">
         {caravans.map((c) => (
           <Panel key={c.slug} title={c.name} action={<span className="text-[0.8rem] text-muted">{c.bookings.length} holds &amp; bookings</span>}>

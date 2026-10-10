@@ -56,9 +56,10 @@ export default async function AdminOverview() {
     });
   } catch { /* unmigrated */ }
 
+  const weekday = new Date().toLocaleDateString("en-GB", { weekday: "long" });
   return (
     <div>
-      <p className="tick-label">Tuesday briefing · live from the books</p>
+      <p className="tick-label">{weekday} briefing · live from the books</p>
       <h1 className="mt-1 font-display text-4xl text-charcoal sm:text-5xl">Here is the yard.</h1>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">

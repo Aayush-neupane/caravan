@@ -108,43 +108,6 @@ export function SectionMarker({
   );
 }
 
-// Dashed overland route divider with mile nodes.
-export function RouteDivider({ from = "BATH", to = "ANYWHERE", miles = "c. 180 mi", dark = false }: { from?: string; to?: string; miles?: string; dark?: boolean }) {
-  const uid = useId().replace(/:/g, "");
-  const ink = dark ? "#EDE6D6" : "#1A2B23";
-  return (
-    <div className="relative mx-auto max-w-wide px-5 sm:px-8" aria-hidden="true">
-      <svg viewBox="0 0 1200 70" className="h-14 w-full" preserveAspectRatio="none">
-        <path
-          id={`rd-${uid}`}
-          d="M10,50 C250,10 450,65 650,35 C850,5 1000,55 1190,25"
-          fill="none"
-          stroke={ink}
-          strokeOpacity={0.5}
-          strokeWidth={1.6}
-          strokeDasharray="2 7"
-          strokeLinecap="round"
-        />
-        {[
-          { x: 10, label: from },
-          { x: 600, label: miles },
-          { x: 1190, label: to },
-        ].map((n) => (
-          <g key={n.label}>
-            <circle cx={n.x} cy={n.x === 600 ? 38 : n.x < 600 ? 42 : 28} r={4.5} fill={ink} />
-            <circle cx={n.x} cy={n.x === 600 ? 38 : n.x < 600 ? 42 : 28} r={8.5} fill="none" stroke={ink} strokeOpacity={0.5} />
-          </g>
-        ))}
-      </svg>
-      <div className="flex justify-between font-mono text-[0.68rem] font-bold uppercase tracking-[0.18em]" style={{ color: ink }}>
-        <span>{from}</span>
-        <span className="text-amberDark">{miles}</span>
-        <span>{to}</span>
-      </div>
-    </div>
-  );
-}
-
 // Small compass for headers/footers.
 export function Compass({ size = 30, className = "" }: { size?: number; className?: string }) {
   return (

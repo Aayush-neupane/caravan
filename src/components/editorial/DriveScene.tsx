@@ -68,15 +68,16 @@ function Convoy({ spin, bob }: { spin?: MotionValue<number>; bob?: MotionValue<n
       <rect x={8} y={-64} width={300} height={4} fill={AMBER} />
       {/* rear lamps (left face) */}
       <rect x={8} y={-52} width={5} height={12} fill={AMBER} />
-      {/* windows */}
-      <rect x={24} y={-106} width={44} height={30} fill={FOREST} />
-      <rect x={76} y={-106} width={44} height={30} fill={FOREST} />
-      <rect x={230} y={-106} width={30} height={30} fill={FOREST} />
-      <line x1={46} y1={-106} x2={46} y2={-76} stroke={SAND} strokeWidth={2} />
-      <line x1={98} y1={-106} x2={98} y2={-76} stroke={SAND} strokeWidth={2} />
+      {/* windows: lit amber at dusk — someone's home */}
+      <rect x={24} y={-106} width={44} height={30} fill={AMBER} />
+      <rect x={76} y={-106} width={44} height={30} fill={AMBER} />
+      <rect x={230} y={-106} width={30} height={30} fill={AMBER} />
+      <line x1={46} y1={-106} x2={46} y2={-76} stroke={FOREST} strokeWidth={2.5} />
+      <line x1={98} y1={-106} x2={98} y2={-76} stroke={FOREST} strokeWidth={2.5} />
+      <line x1={245} y1={-106} x2={245} y2={-76} stroke={FOREST} strokeWidth={2.5} />
       {/* door */}
       <rect x={136} y={-106} width={32} height={76} fill="none" stroke={FOREST} strokeWidth={2.5} />
-      <rect x={141} y={-100} width={22} height={22} fill={FOREST} />
+      <rect x={141} y={-100} width={22} height={22} fill={AMBER} />
       <circle cx={162} cy={-62} r={2.5} fill={FOREST} />
       <rect x={143} y={-30} width={18} height={8} fill={FOREST} opacity={0.7} />
       {/* roof gear */}
@@ -119,6 +120,8 @@ function Convoy({ spin, bob }: { spin?: MotionValue<number>; bob?: MotionValue<n
       {/* lamps: headlamp at the leading front, tail at the rear */}
       <rect x={618} y={-52} width={8} height={11} fill={AMBER} />
       <rect x={350} y={-52} width={6} height={11} fill={AMBER} opacity={0.85} />
+      {/* headlight beam on the road */}
+      <polygon points="626,-50 800,-34 800,-6 626,-38" fill={AMBER} opacity={0.12} />
       {/* exhaust */}
       <rect x={358} y={-24} width={16} height={5} fill={INK} />
 

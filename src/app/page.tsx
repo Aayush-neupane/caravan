@@ -4,7 +4,8 @@ import { BookingSearchPanel } from "@/components/brand/BookingSearchPanel";
 import { Reveal, SectionHeading } from "@/components/editorial/Reveal";
 import { CinematicHero } from "@/components/editorial/Hero";
 import { FieldStrip } from "@/components/editorial/FieldStrip";
-import { Framed, RouteDivider, SectionMarker, Stamp, TopoLines } from "@/components/editorial/Decor";
+import { Framed, SectionMarker, Stamp, TopoLines } from "@/components/editorial/Decor";
+import { ScrollRoute } from "@/components/editorial/ScrollRoute";
 import { FleetCard } from "@/components/fleet/FleetCard";
 import { CARAVANS, DESTINATIONS } from "@/data/catalogue";
 import { gbp } from "@/lib/format";
@@ -92,8 +93,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      <div className="border-b border-border bg-paper py-8" aria-hidden="true">
-        <RouteDivider from="THE YARD" to="THE FIELD" miles="0 mi — step outside" />
+      <div className="border-b border-border bg-paper py-6">
+        <ScrollRoute from="THE YARD" to="THE FIELD" note="0 mi — step outside" />
       </div>
 
       {/* 4 — Rental experience editorial (offset image + text) */}
@@ -261,8 +262,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      <div className="border-y border-border bg-sand/60 py-8" aria-hidden="true">
-        <RouteDivider from="LOG BOOK" to="LEDGER" miles="every pound explained" />
+      <div className="border-y border-border bg-sand/60 py-6">
+        <ScrollRoute from="LOG BOOK" to="LEDGER" note="every pound explained" />
       </div>
 
       {/* 10 — Final CTA */}

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { DESTINATIONS } from "@/data/catalogue";
 import { Framed, SectionMarker, TopoLines } from "@/components/editorial/Decor";
+import { ScrollRoute } from "@/components/editorial/ScrollRoute";
 
 export const metadata: Metadata = { title: "Destinations & itineraries", description: "Road-trip itineraries from Bath: Cotswold lanes, Pembrokeshire coast and Brecon dark skies — distances, seasons and suitable caravans." };
 
@@ -15,6 +16,9 @@ export default function DestinationsPage() {
           <h1 className="mt-4 font-display leading-[0.98]" style={{ fontSize: "clamp(2.8rem, 6vw, 4.8rem)" }}>Start with the route.</h1>
         <p className="mt-4 max-w-2xl text-muted">Itineraries are written from driven miles, not brochure copy. No invented campsite availability, times or restrictions — check sites directly before you travel.</p>
         </div>
+      </div>
+      <div className="border-b border-border bg-paper py-6">
+        <ScrollRoute from="BATH" to="ST DAVIDS" note="three surveyed runs" />
       </div>
       <div className="mx-auto max-w-wide px-5 py-12 sm:px-8">
         <div className="space-y-10">

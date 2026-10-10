@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Framed } from "@/components/editorial/Decor";
+import { ScrollRoute } from "@/components/editorial/ScrollRoute";
 
 export const metadata: Metadata = { title: "About", description: "Hartley & Moor: three caravans from Bath, kept to a high standard. Selection philosophy, service standards and honest limits." };
 
@@ -11,8 +13,14 @@ export default function AboutPage() {
         <h1 className="mt-3 font-display text-5xl text-charcoal">Kept small on purpose.</h1>
         <div className="mt-6 grid gap-10 lg:grid-cols-12">
           <div className="lg:col-span-7">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?auto=format&fit=crop&w=1400&q=70" alt="Canoes on a still lake at dawn" className="aspect-[16/9] w-full object-cover" style={{ borderRadius: 10 }} loading="lazy" />
+            <Framed
+              src="https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?auto=format&fit=crop&w=1400&q=70"
+              alt="Canoes on a still lake at dawn"
+              caption="Still water, first light — why we do this"
+              meta="FRAME 009 · THE YARD"
+              ratio="aspect-[16/9]"
+              radius={10}
+            />
             <div className="mt-6 space-y-4 leading-relaxed text-charcoal/85">
               <p>Hartley &amp; Moor began with one van, one lane, and a stubborn belief: a hire caravan should feel considered, not disposable. We buy fewer vans than we could fill, service them beyond the schedule, and furnish them the way we would want to find them.</p>
               <p>We are based at Lansdown Depot in Bath, serving South West England, the Cotswolds and Wales. Collection is by appointment, handover is unhurried, and the phone is answered by someone who tows.</p>
@@ -33,6 +41,9 @@ export default function AboutPage() {
             </div>
           </aside>
         </div>
+      </div>
+      <div className="border-t border-border bg-sand/50 py-6">
+        <ScrollRoute from="ONE VAN" to="THREE VANS" note="kept small on purpose" />
       </div>
     </div>
   );

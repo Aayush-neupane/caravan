@@ -74,13 +74,17 @@ function Convoy({ spin, bob }: { spin?: MotionValue<number>; bob?: MotionValue<n
       <rect x={8} y={-64} width={300} height={4} fill={AMBER} />
       {/* rear lamps (left face) */}
       <rect x={8} y={-52} width={5} height={12} fill={AMBER} />
-      {/* windows: lit amber at dusk — someone's home */}
-      <rect x={24} y={-106} width={44} height={30} fill={AMBER} />
-      <rect x={76} y={-106} width={44} height={30} fill={AMBER} />
-      <rect x={230} y={-106} width={30} height={30} fill={AMBER} />
+      {/* windows: lit amber at dusk — someone's home, curtains drawn back */}
+      <rect x={24} y={-106} width={44} height={30} rx={2} fill={AMBER} />
+      <rect x={76} y={-106} width={44} height={30} rx={2} fill={AMBER} />
+      <rect x={230} y={-106} width={30} height={30} rx={2} fill={AMBER} />
       <line x1={46} y1={-106} x2={46} y2={-76} stroke={FOREST} strokeWidth={2.5} />
       <line x1={98} y1={-106} x2={98} y2={-76} stroke={FOREST} strokeWidth={2.5} />
       <line x1={245} y1={-106} x2={245} y2={-76} stroke={FOREST} strokeWidth={2.5} />
+      <rect x={24} y={-106} width={9} height={30} fill={SAND} opacity={0.9} />
+      <rect x={59} y={-106} width={9} height={30} fill={SAND} opacity={0.9} />
+      <rect x={76} y={-106} width={9} height={30} fill={SAND} opacity={0.9} />
+      <rect x={111} y={-106} width={9} height={30} fill={SAND} opacity={0.9} />
       {/* side locker outline */}
       <rect x={196} y={-96} width={24} height={52} rx={2} fill="none" stroke={FOREST} strokeWidth={1.6} opacity={0.7} />
       {/* door + grab handle */}
@@ -120,11 +124,15 @@ function Convoy({ spin, bob }: { spin?: MotionValue<number>; bob?: MotionValue<n
         d="M350,-26 L350,-60 Q350,-68 358,-68 L410,-68 L442,-104 Q445,-108 450,-108 L520,-108 Q526,-108 530,-102 L552,-68 L618,-68 Q626,-68 626,-60 L626,-26 Z"
         fill={SAND}
       />
-      {/* glasshouse: windscreen slopes toward the front (right) */}
-      <path d="M434,-100 L516,-100 L544,-70 L434,-70 Z" fill={FOREST} />
+      {/* glasshouse: windscreen slopes toward the front (right), chrome-trimmed */}
+      <path d="M434,-100 L516,-100 L544,-70 L434,-70 Z" fill={FOREST} stroke={SAND} strokeWidth={2} />
       <line x1={492} y1={-100} x2={500} y2={-70} stroke={SAND} strokeWidth={3} />
-      <rect x={358} y={-98} width={56} height={26} fill={FOREST} />
+      <rect x={358} y={-98} width={56} height={26} fill={FOREST} stroke={SAND} strokeWidth={2} />
       <line x1={386} y1={-98} x2={386} y2={-72} stroke={SAND} strokeWidth={2.5} />
+      {/* rear wiper on the tailgate glass */}
+      <line x1={362} y1={-78} x2={376} y2={-92} stroke={SAND} strokeWidth={2.5} strokeLinecap="round" />
+      {/* fuel flap */}
+      <circle cx={560} cy={-44} r={5} fill="none" stroke={FOREST} strokeWidth={2} />
       {/* towing mirror, extended for the caravan's width */}
       <line x1={512} y1={-80} x2={528} y2={-80} stroke={SAND} strokeWidth={3.5} />
       <rect x={528} y={-88} width={12} height={14} rx={2} fill={SAND} stroke={FOREST} strokeWidth={1.5} />
@@ -138,6 +146,9 @@ function Convoy({ spin, bob }: { spin?: MotionValue<number>; bob?: MotionValue<n
       <rect x={448} y={-116} width={70} height={6} rx={3} fill={SAND} opacity={0.9} />
       {/* grille + bumper at the leading front, lamps both ends */}
       <rect x={614} y={-46} width={12} height={16} fill={FOREST} />
+      <line x1={616} y1={-42} x2={624} y2={-42} stroke={SAND} strokeWidth={1.6} />
+      <line x1={616} y1={-38} x2={624} y2={-38} stroke={SAND} strokeWidth={1.6} />
+      <line x1={616} y1={-34} x2={624} y2={-34} stroke={SAND} strokeWidth={1.6} />
       <rect x={618} y={-56} width={8} height={9} fill={AMBER} />
       <rect x={350} y={-52} width={6} height={11} fill={AMBER} opacity={0.85} />
       <rect x={606} y={-30} width={20} height={6} fill={INK} />
@@ -242,15 +253,19 @@ function Sheep({ x, y, s = 1 }: { x: number; y: number; s?: number }) {
 
 const POLES = [-160, 160, 480, 800, 1120, 1440];
 
-export function DriveScene() {
+export function DriveScene({ progress }: { progress?: MotionValue<number> }) {
   const reduce = useReducedMotion();
   const { scrollY } = useScroll();
-  const far = useTransform(scrollY, [0, 800], [0, -60]);
-  const mid = useTransform(scrollY, [0, 800], [0, -150]);
-  const towerX = useTransform(scrollY, [0, 800], [0, -240]);
-  const fast = useTransform(scrollY, [0, 800], [0, -440]);
-  const spin = useTransform(scrollY, [0, 800], [0, 900]);
-  const bob = useTransform(scrollY, [0, 200, 400, 600, 800], [0, -6, 0, -6, 0]);
+  // Section progress when pinned inside the hero, else page scroll. All
+  // motion below derives from this single value.
+  const fallback = useTransform(scrollY, [0, 800], [0, 1]);
+  const p = progress ?? fallback;
+  const far = useTransform(p, [0, 1], [0, -60]);
+  const mid = useTransform(p, [0, 1], [0, -150]);
+  const towerX = useTransform(p, [0, 1], [0, -240]);
+  const fast = useTransform(p, [0, 1], [0, -440]);
+  const spin = useTransform(p, [0, 1], [0, 900]);
+  const bob = useTransform(p, [0, 0.25, 0.5, 0.75, 1], [0, -6, 0, -6, 0]);
 
   return (
     <svg
@@ -269,9 +284,9 @@ export function DriveScene() {
       ))}
       {/* dusk band lifting the horizon */}
       <rect x={0} y={330} width={1440} height={142} fill="#212B22" />
-      {/* sun, sinking onto the open ridge — clear of the church */}
-      <circle cx={700} cy={348} r={62} fill="none" stroke={AMBER} strokeOpacity={0.35} strokeWidth={1.5} />
-      <circle cx={700} cy={348} r={46} fill={AMBER} />
+      {/* sun, high and clear of the church — the outfit tows toward it */}
+      <circle cx={1300} cy={150} r={56} fill="none" stroke={AMBER} strokeOpacity={0.35} strokeWidth={1.5} />
+      <circle cx={1300} cy={150} r={40} fill={AMBER} />
       {/* birds heading home, same direction as the outfit */}
       <g stroke={SAND} strokeOpacity={0.6} strokeWidth={2.2} fill="none" strokeLinecap="round">
         <path d="M920,110 q10,-10 20,0 q10,-10 20,0" />

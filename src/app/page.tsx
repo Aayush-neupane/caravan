@@ -4,6 +4,7 @@ import { BookingSearchPanel } from "@/components/brand/BookingSearchPanel";
 import { Reveal, SectionHeading } from "@/components/editorial/Reveal";
 import { CinematicHero } from "@/components/editorial/Hero";
 import { FieldStrip } from "@/components/editorial/FieldStrip";
+import { JourneyDrive } from "@/components/editorial/JourneyDrive";
 import { Framed, SectionMarker, Stamp, TopoLines } from "@/components/editorial/Decor";
 import { ScrollRoute } from "@/components/editorial/ScrollRoute";
 import { FleetCard } from "@/components/fleet/FleetCard";
@@ -192,6 +193,9 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* 6b — Pinned journey: the page holds while each leg reveals */}
+      <JourneyDrive />
 
       {/* 7 — Included & supported (spec table, not marketing cards) */}
       <section className="bg-paper">

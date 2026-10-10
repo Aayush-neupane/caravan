@@ -2,7 +2,6 @@
 
 import { useRef } from "react";
 import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
-import { Reveal } from "./Reveal";
 import { Framed, SectionMarker } from "./Decor";
 
 // The road, in frames: an asymmetric photo collage where each frame
@@ -32,12 +31,6 @@ const FRAMES = [
     span: "lg:col-span-5 lg:col-start-3 lg:-mt-16",
     ratio: "aspect-[16/11]",
   },
-];
-
-const LEGS: [string, string, string][] = [
-  ["28", "Bath → Cotswolds", "Lanes, farm shops, escarpment skies."],
-  ["60", "Bath → Brecon", "Reservoirs, waterfalls, dark skies."],
-  ["180", "Bath → St Davids", "The long leg. Early start, sea air."],
 ];
 
 export function FieldStrip() {
@@ -73,18 +66,6 @@ export function FieldStrip() {
             </motion.div>
           )
         )}
-      </div>
-
-      <div className="mx-auto grid max-w-wide gap-4 px-5 pb-16 sm:grid-cols-3 sm:px-8">
-        {LEGS.map(([miles, route, note], i) => (
-          <Reveal key={route} delay={i * 0.08}>
-            <div className="border border-white/15 bg-forestDeep p-5" style={{ borderRadius: 10 }}>
-              <p className="font-display text-5xl text-amber">{miles}<span className="font-sans text-sm text-paper/60"> mi</span></p>
-              <p className="mt-1 font-mono text-[0.7rem] font-bold uppercase tracking-[0.18em] text-paper/80">{route}</p>
-              <p className="mt-2 text-[0.88rem] text-paper/65">{note}</p>
-            </div>
-          </Reveal>
-        ))}
       </div>
     </section>
   );

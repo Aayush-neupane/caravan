@@ -146,9 +146,9 @@ export default async function HomePage() {
           <ol className="mt-10 grid gap-0 border-t border-border md:grid-cols-2">
             {[
               ["Choose caravan & dates", "Filter the fleet by berths, weights and facilities. Availability is live — what you see is what you can book."],
-              ["Extras & eligibility", "Bedding, awning, mileage. We check licence entitlement and tow-car match before you pay in full."],
-              ["Reserve & pay", "A 25% deposit secures your dates; the balance is due 28 days before collection. Demo payments are clearly labelled."],
-              ["Prepare", "Collection pack, route notes and a packing list arrive by email. Documents upload to your account."],
+              ["Extras & contact", "Bedding, awning, mileage — plus your details. Licence and tow-car match are checked at the depot counter."],
+              ["Reserve & voucher", "Your dates are held and a collection voucher issued. Nothing is charged online — you settle at the depot counter."],
+              ["Prepare", "Collection pack, route notes and a packing list arrive by email. Bring your licence and tow-car documents to the counter."],
               ["Collect", "40-minute handover at Lansdown with tow check and accompanied drive. Leave when you are ready, not before."],
               ["Travel", "Gas, breakdown cover and a real human on the phone. Two-hour towing days recommended."],
               ["Return", "30-minute return inspection with mileage and condition recorded together. No surprises."],
@@ -283,7 +283,7 @@ export default async function HomePage() {
               <p className="tick-label !text-sand/70">Final entry — the lanes are waiting</p>
             </div>
             <h2 className="mt-4 font-display leading-[0.98]" style={{ fontSize: "clamp(2.6rem, 5.5vw, 4.5rem)" }}>Travel at your own pace.</h2>
-            <p className="mt-4 max-w-xl text-paper/80">Check live availability for your dates — no account needed, no payment until you choose a caravan.</p>
+            <p className="mt-4 max-w-xl text-paper/80">Check live availability for your dates — no account needed, nothing charged until you reach the depot counter.</p>
             <p className="mt-4 font-mono text-[0.72rem] uppercase tracking-[0.18em] text-paper/50">Bath → Cotswolds 28 mi · Bath → St Davids 180 mi · Bath → Brecon 60 mi</p>
           </div>
           <div className="lg:col-span-4 lg:col-start-9">
@@ -293,7 +293,7 @@ export default async function HomePage() {
                 <Link href="/fleet" className="btn-primary !bg-amber !border-amber !text-forest hover:!bg-white">Browse the fleet</Link>
                 <Link href="/booking" className="btn-secondary !bg-transparent !text-paper !border-white/40">Start a booking</Link>
               </div>
-              <p className="mt-3 text-[0.8rem] text-paper/60">Free date changes within 14 days · Deposit 25% · Balance 28 days before</p>
+              <p className="mt-3 text-[0.8rem] text-paper/60">Free date changes within 14 days · Deposit 25% at the counter · Docs checked in person</p>
             </div>
           </div>
         </div>

@@ -72,7 +72,7 @@ export default async function PricingPage() {
           <div>
             <h2 className="font-display text-3xl">Deposits, done properly</h2>
             <div className="mt-4 space-y-4 text-[0.95rem] leading-relaxed text-charcoal/85">
-              <p><strong>Booking deposit (25%):</strong> part-payment of the rental itself. Balance due 28 days before collection; reminders sent automatically.</p>
+              <p><strong>Booking deposit (25%):</strong> part-payment of the rental itself, settled at the depot counter along with the balance. Nothing is charged online — your reservation simply holds the dates.</p>
               <p><strong>Refundable security deposit (£500–£750):</strong> authorised alongside the balance and released within 5 working days of return, less only documented damage, missing items or excess mileage. It is held separately in the accounts and never reported as revenue.</p>
               <p><strong>Coupons &amp; gift vouchers:</strong> percent or fixed codes with date, caravan and minimum-spend rules — all validated server-side. Voucher balances cannot be overspent, even under concurrent redemption.</p>
             </div>

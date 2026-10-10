@@ -22,8 +22,8 @@ export default function SignInPage() {
 
   return (
     <div className="mx-auto max-w-md px-5 py-12">
-      <p className="tick-label">Sign in</p>
-      <h1 className="mt-2 font-display text-4xl">Welcome back.</h1>
+      <p className="tick-label">Staff sign-in</p>
+      <h1 className="mt-2 font-display text-4xl">Depot counter.</h1>
       <form onSubmit={submit} className="mt-6 border border-border bg-white p-6" style={{ borderRadius: 10 }}>
         <label className="field-label" htmlFor="s-email">Email</label>
         <input id="s-email" className="field-input" value={email} onChange={(e) => setEmail(e.target.value)} />

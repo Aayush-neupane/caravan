@@ -9,7 +9,8 @@ if (process.env.NODE_ENV === "production" && !process.env.NEXTAUTH_SECRET) {
   throw new Error("NEXTAUTH_SECRET must be set in production.");
 }
 
-// Demo auth: two seeded accounts (owner + customer) for local preview.
+// Demo auth: a single seeded staff account for local preview. Guests never
+// sign in — reservations are guest-only, found by email + voucher reference.
 // Production: set AUTH_ALLOW_DEMO!=="true" (default) and these logins are
 // rejected — wire Email/OAuth + hashed DB users instead. Role checks below
 // remain the enforcement point.
@@ -18,7 +19,6 @@ const DEMO_ALLOW = process.env.AUTH_ALLOW_DEMO === "true" || process.env.NODE_EN
 
 export const DEMO_USERS = [
   { id: "demo-owner", email: "owner@hartleyandmoor.example", password: process.env.DEMO_OWNER_PASSWORD ?? "owner1234", name: "M. Hartley", role: "owner" },
-  { id: "demo-customer", email: "customer@example.com", password: process.env.DEMO_CUSTOMER_PASSWORD ?? "customer1234", name: "Demo Traveller", role: "customer" },
 ];
 
 export const authOptions: NextAuthOptions = {

@@ -391,20 +391,23 @@ export function DriveScene({ progress }: { progress?: MotionValue<number> }) {
   const mid = useTransform(p, [0, 1], [0, -150]);
   const towerX = useTransform(p, [0, 1], [0, -240]);
   const fast = useTransform(p, [0, 1], [0, -440]);
-  const spin = useTransform(p, [0, 1], [0, 900]);
+  const spin = useTransform(p, [0, 1], [0, 1320]); // scaled to the longer run
   const bob = useTransform(p, [0, 0.25, 0.5, 0.75, 1], [0, -6, 0, -6, 0]);
-  // The outfit starts at the left, parked over the hidden line, and pulls
-  // away to the right — uncovering the phrase as it goes.
-  const convoyXAnim = useTransform(p, [0, 1], [-60, 1290]);
-  const convoyX: number | MotionValue<number> = reduce ? 1290 : convoyXAnim;
+  // The outfit starts fully off-screen left and drives in as you scroll —
+  // a proper entrance. It crosses centre (~p 0.55), wipes over the hidden
+  // line, and pulls away right.
+  const X_START = -700;
+  const X_END = 1290;
+  const convoyXAnim = useTransform(p, [0, 1], [X_START, X_END]);
+  const convoyX: number | MotionValue<number> = reduce ? X_END : convoyXAnim;
   // Cinematic centre wipe: the outfit's midpoint reaches screen centre at
-  // ~p 0.34 (convoyX ≈ 403). The line's opacity is driven by the van's
-  // measured nose position against the text's MEASURED half-width (not
-  // guessed scroll stops): it fades in over the last 60px of approach and
-  // hits 1 exactly as the nose covers the final letter — so the visible
-  // reveal is purely physical as the rear bumper clears left→right, then
-  // the line stays for the rest of the pin. Re-measured after fonts load
-  // so Cormorant's real advances are used, not estimates.
+  // ~p 0.55. The line's opacity is driven by the van's measured nose
+  // position against the text's MEASURED half-width (not guessed scroll
+  // stops): it fades in over the last 60px of approach and hits 1 exactly
+  // as the nose covers the final letter — so the visible reveal is purely
+  // physical as the rear bumper clears left→right, then the line stays for
+  // the rest of the pin. Re-measured after fonts load so Cormorant's real
+  // advances are used, not estimates.
   const halfRef = useRef(270); // fallback estimate until measured
   const textRef = useRef<SVGTextElement>(null);
   const phraseOpacity = useMotionValue(reduce ? 1 : 0);
@@ -429,7 +432,7 @@ export function DriveScene({ progress }: { progress?: MotionValue<number> }) {
       phraseOpacity.set(1);
       return;
     }
-    const nose = -60 + v * (1290 - -60) + 626; // van front edge in scene units
+    const nose = X_START + v * (X_END - X_START) + 626; // van front edge in scene units
     const lastLetter = 720 + halfRef.current;
     phraseOpacity.set(Math.min(1, Math.max(0, (nose - (lastLetter - 60)) / 60)));
   });

@@ -35,10 +35,34 @@ describe("pricing engine", () => {
     expect(q.weeklyDiscountPence).toBe(Math.round(q.nightlySubtotalPence * 0.1));
   });
 
-  it("applies seasonal multiplier and percent coupon", () => {
-    const q = priceQuote({ ...base, seasonalMultiplierPct: 120, pickupISO: "2026-07-13", returnISO: "2026-07-15", extras: [], couponKind: "percent", couponValue: 10 });
-    expect(q.nightlySubtotalPence).toBe(Math.round(20000 * 1.2));
-    expect(q.couponDiscountPence).toBeGreaterThan(0);
+  it("applies seasonal multiplier per night from each night's own date", () => {
+    // 2026-09-04 (Fri) + 09-05 (Sat) are in high season ×1.2; 09-06+ are not.
+    const q = priceQuote({ ...base, pickupISO: "2026-09-04", returnISO: "2026-09-08", extras: [] });
+    expect(q.nights).toBe(4);
+    const summer = q.nightLines.filter((n) => n.seasonalPct === 120);
+    const normal = q.nightLines.filter((n) => n.seasonalPct === 100);
+    expect(summer).toHaveLength(2);
+    expect(normal).toHaveLength(2);
+    // Fri/Sat nights at weekend rate ×1.2, Sun/Mon at base ×1.0
+    expect(q.nightlySubtotalPence).toBe(
+      Math.round(12000 * 1.2) + Math.round(12000 * 1.2) + 10000 + 10000
+    );
+    expect(q.seasonalUpliftPence).toBe(q.nightlySubtotalPence - q.nightlyBasePence);
+    expect(q.nightlyBasePence).toBe(12000 + 12000 + 10000 + 10000);
+  });
+
+  it("applies percent coupons with a 60% cap and fixed coupons capped at subtotal", () => {
+    const capped = priceQuote({ ...base, pickupISO: "2026-10-13", returnISO: "2026-10-15", extras: [], couponKind: "percent", couponValue: 90 });
+    expect(capped.couponDiscountPence).toBe(Math.round(capped.rentalSubtotalPence * 0.6));
+    const fixed = priceQuote({ ...base, pickupISO: "2026-10-13", returnISO: "2026-10-15", extras: [], couponKind: "fixed", couponValue: 999999 });
+    expect(fixed.couponDiscountPence).toBe(fixed.rentalSubtotalPence + fixed.feesPence + fixed.extrasPence);
+    expect(fixed.subtotalExTaxPence).toBe(0);
+  });
+
+  it("prices per-night extras across the whole stay", () => {
+    const q = priceQuote({ ...base, pickupISO: "2026-10-13", returnISO: "2026-10-16", extras: [{ unitPricePence: 1000, qty: 2, perNight: true }] });
+    expect(q.nights).toBe(3);
+    expect(q.extrasPence).toBe(6000);
   });
 
   it("keeps refundable deposit separate from revenue total", () => {

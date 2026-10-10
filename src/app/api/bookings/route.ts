@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { priceQuote, seasonalMultiplierFor } from "@/features/pricing/engine";
+import { priceQuote } from "@/features/pricing/engine";
 import { isAvailable, validateStay } from "@/features/availability/engine";
-import { BLOCKING_STATUSES, assertTransition } from "@/features/bookings/stateMachine";
+import { BLOCKING_STATUSES } from "@/features/bookings/stateMachine";
 import { makeReference } from "@/lib/format";
-import { CARAVANS, EXTRAS } from "@/data/catalogue";
+import { CARAVANS } from "@/data/catalogue";
+import { resolveCoupon, resolveExtras } from "@/features/pricing/coupons";
 import { sendNotification, bookingEmailBodies } from "@/lib/email";
 
 const CreateBody = z.object({
@@ -66,25 +67,45 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Your dates are no longer available. Choose another range to continue." }, { status: 409 });
     }
 
-    // Price server-side; extras resolved from catalogue.
-    const extrasResolved = body.extras
-      .filter((e) => e.qty > 0)
-      .map((e) => {
-        const def = EXTRAS.find((x) => x.slug === e.slug);
-        if (!def) throw new Error(`Unknown extra: ${e.slug}`);
-        return { slug: e.slug, name: def.name, unitPricePence: def.pricePence, qty: e.qty, perNight: false };
-      });
+    // Price server-side; extras + coupon resolved from server data, never browser totals.
+    let extrasResolved: { slug: string; name: string; unitPricePence: number; qty: number; perNight: boolean; extraId: string | null }[];
+    try {
+      extrasResolved = await resolveExtras(body.extras);
+    } catch (e) {
+      return NextResponse.json({ error: e instanceof Error ? e.message : "Invalid extras." }, { status: 422 });
+    }
 
-    const quote = priceQuote({
+    const prelim = priceQuote({
       baseNightlyPence: caravan.baseNightlyPence,
       weekendNightlyPence: caravan.weekendNightlyPence ?? undefined,
       weeklyDiscountPct: caravan.weeklyDiscountPct,
-      seasonalMultiplierPct: seasonalMultiplierFor(body.pickup),
       pickupISO: body.pickup, returnISO: body.return,
       cleaningFeePence: caravan.cleaningFeePence,
       extras: extrasResolved,
       taxPct: 20, securityDepositPence: caravan.securityDepositPence, depositPct: 25,
     });
+
+    let coupon = null;
+    try {
+      coupon = await resolveCoupon(body.coupon, { rentalSubtotalPence: prelim.rentalSubtotalPence, caravanSlug: body.slug });
+    } catch (e) {
+      return NextResponse.json({ error: e instanceof Error ? e.message : "Invalid coupon." }, { status: 422 });
+    }
+
+    const quote = priceQuote(
+      {
+        baseNightlyPence: caravan.baseNightlyPence,
+        weekendNightlyPence: caravan.weekendNightlyPence ?? undefined,
+        weeklyDiscountPct: caravan.weeklyDiscountPct,
+        pickupISO: body.pickup, returnISO: body.return,
+        cleaningFeePence: caravan.cleaningFeePence,
+        extras: extrasResolved,
+        taxPct: 20,
+        couponKind: coupon ? coupon.kind : "none", couponValue: coupon ? coupon.value : 0,
+        securityDepositPence: caravan.securityDepositPence, depositPct: 25,
+      },
+      coupon?.code ?? null
+    );
 
     const reference = makeReference();
     const expiresAt = new Date(Date.now() + 20 * 60 * 1000);
@@ -132,12 +153,15 @@ export async function POST(req: Request) {
       });
 
       for (const ex of extrasResolved) {
-        const record = await tx.extra.findUnique({ where: { slug: ex.slug } });
-        if (record) {
+        if (ex.extraId) {
           await tx.bookingExtraItem.create({
-            data: { bookingId: created.id, extraId: record.id, qty: ex.qty, unitPricePence: ex.unitPricePence, totalPence: ex.unitPricePence * ex.qty },
+            data: { bookingId: created.id, extraId: ex.extraId, qty: ex.qty, unitPricePence: ex.unitPricePence, totalPence: ex.unitPricePence * ex.qty * (ex.perNight ? quote.nights : 1) },
           });
         }
+      }
+
+      if (coupon) {
+        await tx.coupon.updateMany({ where: { code: coupon.code }, data: { usedCount: { increment: 1 } } });
       }
       return created;
     });

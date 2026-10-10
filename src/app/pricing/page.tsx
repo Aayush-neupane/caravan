@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { CARAVANS } from "@/data/catalogue";
-import { priceQuote, seasonalMultiplierFor } from "@/features/pricing/engine";
+import { priceQuote } from "@/features/pricing/engine";
 import { gbp } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Pricing & extras", description: "How caravan hire is priced: nightly rates, seasonal multipliers, weekly discounts, cleaning, deposits, mileage and VAT — with itemised examples from the pricing engine." };
@@ -10,7 +10,7 @@ function Example({ slug, pickup, ret, label }: { slug: string; pickup: string; r
   const c = CARAVANS.find((x) => x.slug === slug)!;
   const q = priceQuote({
     baseNightlyPence: c.baseNightlyPence, weekendNightlyPence: c.weekendNightlyPence,
-    weeklyDiscountPct: c.weeklyDiscountPct, seasonalMultiplierPct: seasonalMultiplierFor(pickup),
+    weeklyDiscountPct: c.weeklyDiscountPct,
     pickupISO: pickup, returnISO: ret, cleaningFeePence: c.cleaningFeePence,
     extras: [], taxPct: 20, securityDepositPence: c.securityDepositPence, depositPct: 25,
   });
@@ -19,7 +19,8 @@ function Example({ slug, pickup, ret, label }: { slug: string; pickup: string; r
       <p className="tick-label">{label}</p>
       <h3 className="mt-1 font-display text-2xl">{c.name} · {pickup} → {ret} ({q.nights} nights)</h3>
       <dl className="mt-4 space-y-1.5 text-[0.92rem]">
-        <div className="flex justify-between"><dt className="text-muted">Nightly ({q.nights} × from {gbp(c.baseNightlyPence)})</dt><dd>{gbp(q.nightlySubtotalPence)}</dd></div>
+        <div className="flex justify-between"><dt className="text-muted">Nightly base ({q.nights} nights, weekend rates incl.)</dt><dd>{gbp(q.nightlyBasePence)}</dd></div>
+        {q.seasonalUpliftPence > 0 && <div className="flex justify-between"><dt className="text-muted">Seasonal uplift (per-night, by date)</dt><dd>{gbp(q.seasonalUpliftPence)}</dd></div>}
         {q.weeklyDiscountPence > 0 && <div className="flex justify-between"><dt className="text-muted">Long-stay discount</dt><dd className="text-success">−{gbp(q.weeklyDiscountPence)}</dd></div>}
         <div className="flex justify-between"><dt className="text-muted">Cleaning (mandatory)</dt><dd>{gbp(q.feesPence)}</dd></div>
         <div className="flex justify-between"><dt className="text-muted">VAT 20%</dt><dd>{gbp(q.taxPence)}</dd></div>

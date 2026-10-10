@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { priceQuote, seasonalMultiplierFor } from "@/features/pricing/engine";
+import { priceQuote } from "@/features/pricing/engine";
 import { isAvailable, validateStay } from "@/features/availability/engine";
 import { BLOCKING_STATUSES } from "@/features/bookings/stateMachine";
+import { resolveCoupon, resolveExtras } from "@/features/pricing/coupons";
 import { CARAVANS } from "@/data/catalogue";
 
 const Body = z.object({
@@ -12,7 +13,7 @@ const Body = z.object({
   return: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   travellers: z.number().int().min(1).max(6).default(2),
   extras: z.array(z.object({ slug: z.string(), qty: z.number().int().min(0).max(10) })).default([]),
-  coupon: z.string().optional(),
+  coupon: z.string().max(32).optional(),
 });
 
 // POST /api/quote — server-side availability + itemised pricing. Never trusts browser totals.
@@ -36,23 +37,56 @@ export async function POST(req: Request) {
   }
 
   try {
+    // Resolve extras + coupon BEFORE pricing so every figure derives server-side.
+    let extrasResolved: { unitPricePence: number; qty: number; perNight: boolean }[] = [];
+    try {
+      extrasResolved = await resolveExtras(body.extras);
+    } catch (e) {
+      return NextResponse.json({ error: e instanceof Error ? e.message : "Invalid extras." }, { status: 422 });
+    }
+
     const caravan = await prisma.caravan.findUnique({
       where: { slug: body.slug },
       include: { bookings: { where: { status: { in: [...BLOCKING_STATUSES] } } }, holds: true, blocks: true, maintenance: { where: { done: false } } },
     });
-    if (!caravan) {
-      // DB not seeded yet — fall back to catalogue availability (open).
-      const quote = priceQuote({
-        baseNightlyPence: catalogue.baseNightlyPence,
-        weekendNightlyPence: catalogue.weekendNightlyPence,
-        weeklyDiscountPct: catalogue.weeklyDiscountPct,
-        seasonalMultiplierPct: seasonalMultiplierFor(body.pickup),
+
+    const priceWith = async (base: number, weekend: number | null, weeklyDisc: number, cleaning: number, deposit: number) => {
+      // Preliminary rental subtotal (no coupon) to validate coupon minimums.
+      const prelim = priceQuote({
+        baseNightlyPence: base, weekendNightlyPence: weekend ?? undefined,
+        weeklyDiscountPct: weeklyDisc,
         pickupISO: body.pickup, returnISO: body.return,
-        cleaningFeePence: catalogue.cleaningFeePence,
-        extras: [], taxPct: 20,
-        securityDepositPence: catalogue.securityDepositPence, depositPct: 25,
+        cleaningFeePence: cleaning, extras: extrasResolved, taxPct: 20,
+        securityDepositPence: deposit, depositPct: 25,
       });
-      return NextResponse.json({ available: true, quote, caravan: catalogue, seeded: false });
+      let coupon = null;
+      try {
+        coupon = await resolveCoupon(body.coupon, { rentalSubtotalPence: prelim.rentalSubtotalPence, caravanSlug: body.slug });
+      } catch (e) {
+        return { error: e instanceof Error ? e.message : "Invalid coupon." };
+      }
+      const quote = priceQuote(
+        {
+          baseNightlyPence: base, weekendNightlyPence: weekend ?? undefined,
+          weeklyDiscountPct: weeklyDisc,
+          pickupISO: body.pickup, returnISO: body.return,
+          cleaningFeePence: cleaning, extras: extrasResolved, taxPct: 20,
+          couponKind: coupon ? coupon.kind : "none", couponValue: coupon ? coupon.value : 0,
+          securityDepositPence: deposit, depositPct: 25,
+        },
+        coupon?.code ?? null
+      );
+      return { quote };
+    };
+
+    if (!caravan) {
+      // DB not seeded yet — fall back to catalogue rates (open availability).
+      const result = await priceWith(
+        catalogue.baseNightlyPence, catalogue.weekendNightlyPence,
+        catalogue.weeklyDiscountPct, catalogue.cleaningFeePence, catalogue.securityDepositPence
+      );
+      if ("error" in result) return NextResponse.json({ error: result.error, available: false }, { status: 422 });
+      return NextResponse.json({ available: true, quote: result.quote, caravan: catalogue, seeded: false });
     }
 
     const existing = [
@@ -66,17 +100,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ available: false, message: "Those dates are no longer available. Choose another range to continue.", quote: null }, { status: 200 });
     }
 
-    const quote = priceQuote({
-      baseNightlyPence: caravan.baseNightlyPence,
-      weekendNightlyPence: caravan.weekendNightlyPence ?? catalogue.weekendNightlyPence,
-      weeklyDiscountPct: caravan.weeklyDiscountPct,
-      seasonalMultiplierPct: seasonalMultiplierFor(body.pickup),
-      pickupISO: body.pickup, returnISO: body.return,
-      cleaningFeePence: caravan.cleaningFeePence,
-      extras: [], taxPct: 20,
-      securityDepositPence: caravan.securityDepositPence, depositPct: 25,
-    });
-    return NextResponse.json({ available: true, quote, caravan: { name: caravan.name, slug: caravan.slug } });
+    const result = await priceWith(
+      caravan.baseNightlyPence, caravan.weekendNightlyPence,
+      caravan.weeklyDiscountPct, caravan.cleaningFeePence, caravan.securityDepositPence
+    );
+    if ("error" in result) return NextResponse.json({ error: result.error, available: false }, { status: 422 });
+    return NextResponse.json({ available: true, quote: result.quote, caravan: { name: caravan.name, slug: caravan.slug } });
   } catch (e) {
     console.error("[quote]", e);
     return NextResponse.json({ error: "Availability check failed. Please try again." }, { status: 500 });

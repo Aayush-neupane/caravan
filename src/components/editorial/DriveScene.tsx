@@ -1,7 +1,7 @@
 "use client";
 
-import { useRef } from "react";
-import { motion, useMotionValueEvent, useReducedMotion, useScroll, useTransform, type MotionValue } from "framer-motion";
+import { useEffect, useRef } from "react";
+import { motion, useMotionValue, useMotionValueEvent, useReducedMotion, useScroll, useTransform, type MotionValue } from "framer-motion";
 
 const SAND = "#EDE6D6";
 const INK = "#0C1712";
@@ -262,11 +262,42 @@ export function DriveScene({ progress }: { progress?: MotionValue<number> }) {
   // away to the right — uncovering the phrase as it goes.
   const convoyXAnim = useTransform(p, [0, 1], [-60, 1290]);
   const convoyX: number | MotionValue<number> = reduce ? 1290 : convoyXAnim;
-  // Cinematic centre reveal: the outfit's midpoint reaches screen centre at
-  // ~p 0.34 (convoyX ≈ 403). The line fades in as the van covers it, sits
-  // BEHIND the convoy in paint order, and stays once the outfit pulls away.
-  const phraseAnim = useTransform(p, [0.3, 0.55, 1], [0, 1, 1]);
-  const phraseOpacity: number | MotionValue<number> = reduce ? 1 : phraseAnim;
+  // Cinematic centre wipe: the outfit's midpoint reaches screen centre at
+  // ~p 0.34 (convoyX ≈ 403). The line's opacity is driven by the van's
+  // measured nose position against the text's MEASURED half-width (not
+  // guessed scroll stops): it fades in over the last 60px of approach and
+  // hits 1 exactly as the nose covers the final letter — so the visible
+  // reveal is purely physical as the rear bumper clears left→right, then
+  // the line stays for the rest of the pin. Re-measured after fonts load
+  // so Cormorant's real advances are used, not estimates.
+  const halfRef = useRef(270); // fallback estimate until measured
+  const textRef = useRef<SVGTextElement>(null);
+  const phraseOpacity = useMotionValue(reduce ? 1 : 0);
+  useEffect(() => {
+    const measure = () => {
+      const el = textRef.current;
+      if (el) {
+        try {
+          halfRef.current = el.getComputedTextLength() / 2;
+        } catch {
+          /* keep estimate */
+        }
+      }
+    };
+    measure();
+    if (typeof document !== "undefined" && document.fonts?.ready) {
+      void document.fonts.ready.then(measure).catch(() => {});
+    }
+  }, []);
+  useMotionValueEvent(p, "change", (v) => {
+    if (reduce) {
+      phraseOpacity.set(1);
+      return;
+    }
+    const nose = -60 + v * (1290 - -60) + 626; // van front edge in scene units
+    const lastLetter = 720 + halfRef.current;
+    phraseOpacity.set(Math.min(1, Math.max(0, (nose - (lastLetter - 60)) / 60)));
+  });
 
   return (
     <svg
@@ -378,18 +409,21 @@ export function DriveScene({ progress }: { progress?: MotionValue<number> }) {
       <line x1={0} y1={472} x2={1440} y2={472} stroke={SAND} strokeOpacity={0.85} strokeWidth={3} />
       <line x1={0} y1={522} x2={1440} y2={522} stroke={SAND} strokeOpacity={0.8} strokeWidth={3} strokeDasharray="34 26" />
 
-      {/* the hidden line: centred title card on the road, set in tracked-out
-          uppercase Cormorant like a film intertitle. Painted BEFORE the
-          convoy so the outfit passes OVER it — covered as the van reaches
-          centre, uncovered as the rear bumper clears, then it remains. */}
+      {/* the hidden line: centred title card, tracked-out uppercase Cormorant.
+          TRUE OCCLUSION WIPE — painted BEFORE the convoy (behind it) and its
+          opacity is driven by the van's measured nose position (see above),
+          so at whatever width Cormorant meters, the fade completes exactly
+          as the van covers the last letter. Keep this line narrower than the
+          ~618-wide van body or full coverage is impossible. */}
       <motion.text
+        ref={textRef}
         x={720}
-        y={514}
+        y={505}
         textAnchor="middle"
-        fontSize={56}
+        fontSize={31}
         fontFamily="'Cormorant Garamond', Georgia, serif"
         fontWeight={500}
-        letterSpacing={9}
+        letterSpacing={5}
         fill="#FFFFFF"
         stroke="#0C1712"
         strokeWidth={0.6}

@@ -8,12 +8,13 @@ import { gateMutation } from "@/lib/security";
 const Body = z.object({ published: z.boolean() }).strict();
 
 // PATCH /api/admin/reviews/:id — publish/unpublish a customer review.
+// Owner/admin only, and only verified reviews go live as social proof.
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
   const denied = gateMutation(req, "admin:reviews", 60, 60_000);
   if (denied) return denied;
   const session = await getServerSession(authOptions);
   const role = (session?.user as { role?: string } | undefined)?.role;
-  if (!session || !can("bookings:write", role)) return NextResponse.json({ error: "Staff access required." }, { status: 403 });
+  if (!session || !can("reviews:write", role)) return NextResponse.json({ error: "Owner or admin required." }, { status: 403 });
 
   let body: z.infer<typeof Body>;
   try {
@@ -23,6 +24,9 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   }
   const row = await prisma.review.findUnique({ where: { id: params.id } });
   if (!row) return NextResponse.json({ error: "Not found." }, { status: 404 });
+  if (body.published && !row.verified) {
+    return NextResponse.json({ error: "Only verified reviews (linked to a completed hire) can go live." }, { status: 422 });
+  }
   await prisma.review.update({ where: { id: row.id }, data: { published: body.published } });
   await prisma.auditLog.create({
     data: { action: body.published ? "reviews:publish" : "reviews:unpublish", resource: "review", resourceId: row.id, detail: `by ${session.user?.email ?? role}` },

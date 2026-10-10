@@ -6,8 +6,15 @@ type Bucket = { count: number; reset: number };
 
 const buckets = new Map<string, Bucket>();
 
-// Prune occasionally so the map cannot grow without bound.
+// Prune occasionally so the maps cannot grow without bound.
 let ops = 0;
+
+function sweep(): void {
+  if (++ops % 500 !== 0) return;
+  const now = Date.now();
+  for (const [k, b] of buckets) if (now > b.reset) buckets.delete(k);
+  for (const [k, f] of fails) if (now > f.reset) fails.delete(k);
+}
 
 export function rateLimit(
   key: string,
@@ -15,9 +22,7 @@ export function rateLimit(
   windowMs: number
 ): { ok: boolean; retryAfterSec: number } {
   const now = Date.now();
-  if (++ops % 500 === 0) {
-    for (const [k, b] of buckets) if (now > b.reset) buckets.delete(k);
-  }
+  sweep();
   const b = buckets.get(key);
   if (!b || now > b.reset) {
     buckets.set(key, { count: 1, reset: now + windowMs });

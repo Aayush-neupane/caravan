@@ -33,6 +33,13 @@ export async function PATCH(req: Request) {
   const user = await prisma.user.findUnique({ where: { email: body.email } });
   if (!user) return NextResponse.json({ error: "User not found." }, { status: 404 });
   if (user.role === body.role) return NextResponse.json({ ok: true, deduped: true });
+  // Last-owner floor: demoting the final owner would orphan administration.
+  if (user.role === "owner" && body.role !== "owner") {
+    const owners = await prisma.user.count({ where: { role: "owner", id: { not: user.id } } });
+    if (owners === 0) {
+      return NextResponse.json({ error: "This is the last owner — promote someone else first." }, { status: 409 });
+    }
+  }
 
   await prisma.$transaction([
     prisma.user.update({ where: { id: user.id }, data: { role: body.role } }),

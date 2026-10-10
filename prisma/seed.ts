@@ -1,6 +1,12 @@
 // Seed: three demo caravans + operational scenarios.
 // Run: npx prisma db push && npm run seed
 // Safe to re-run (upserts by slug/code). Clearly labelled demo data.
+// REFUSES production unless explicitly allowed — demo bookings, payments and
+// credentials must never pollute live reports.
+if (process.env.NODE_ENV === "production" && process.env.ALLOW_SEED !== "true") {
+  console.error("Refusing to seed in production without ALLOW_SEED=true.");
+  process.exit(1);
+}
 
 import { PrismaClient } from "@prisma/client";
 

@@ -6,8 +6,8 @@ import { useRouter } from "next/navigation";
 
 export default function SignInPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("owner@hartleyandmoor.example");
-  const [password, setPassword] = useState("owner1234");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -16,7 +16,7 @@ export default function SignInPage() {
     setBusy(true); setError(null);
     const r = await signIn("credentials", { email, password, redirect: false });
     setBusy(false);
-    if (r?.error) { setError("Invalid credentials. Try the demo accounts below."); return; }
+    if (r?.error) { setError("Invalid email or password."); return; }
     router.push("/admin");
   }
 
@@ -31,11 +31,6 @@ export default function SignInPage() {
         <input id="s-pass" type="password" className="field-input" value={password} onChange={(e) => setPassword(e.target.value)} />
         {error && <p role="alert" className="field-error">{error}</p>}
         <button className="btn-primary mt-5 w-full" disabled={busy}>{busy ? "Signing in…" : "Sign in"}</button>
-        <div className="mt-4 border-t border-border pt-4 text-[0.82rem] text-muted">
-          <p className="font-semibold text-charcoal">Demo accounts (seeded):</p>
-          <p>Owner: owner@hartleyandmoor.example / owner1234</p>
-          <p>Customer: customer@example.com / customer1234</p>
-        </div>
       </form>
     </div>
   );

@@ -6,7 +6,8 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
       <p className="font-mono text-[0.68rem] font-bold uppercase tracking-[0.22em] text-amber">Something went astray</p>
       <h1 className="mt-3 font-display text-5xl">That lane is blocked.</h1>
       <p className="mt-3 max-w-md text-charcoal/75">
-        {error.message || "An unexpected error occurred. Try again — your booking details are safe."}
+        An unexpected error occurred. Try again — your booking details are safe.
+        {error.digest ? <span className="mt-2 block font-mono text-[0.72rem] text-muted">Ref {error.digest}</span> : null}
       </p>
       <button type="button" onClick={reset} className="btn-primary mt-6">
         Try again

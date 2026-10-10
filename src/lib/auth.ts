@@ -1,6 +1,7 @@
 import NextAuth, { type NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { authLockedOut, clearAuthFailures, recordAuthFailure } from "./rateLimit";
+import { authLockedOut, clearAuthFailures, rateLimit, recordAuthFailure } from "./rateLimit";
+import { STAFF_ROLES } from "./roles";
 
 // Production refuses to boot without a real session secret — demo fallback
 // is development-only.
@@ -21,7 +22,8 @@ export const DEMO_USERS = [
 ];
 
 export const authOptions: NextAuthOptions = {
-  session: { strategy: "jwt", maxAge: 12 * 60 * 60 },
+  // 8h suits shared ops machines; revocation lag is bounded by this window.
+  session: { strategy: "jwt", maxAge: 8 * 60 * 60 },
   cookies: {
     sessionToken: {
       name: `${process.env.NODE_ENV === "production" ? "__Secure-" : ""}next-auth.session-token`,
@@ -40,9 +42,19 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         if (!DEMO_ALLOW) return null;
         const email = (credentials?.email ?? "").toLowerCase().trim().slice(0, 120);
+        // Password-spray brake: per-IP budget across all emails, plus the
+        // per-email lockout below. Best-effort header read (edge + node).
+        try {
+          const headers = (req as unknown as { headers?: Record<string, string | string[]> })?.headers;
+          const fwd = headers ? headers["x-forwarded-for"] ?? headers["X-Forwarded-For"] : undefined;
+          const ip = (Array.isArray(fwd) ? fwd[0] : fwd ?? "local").split(",")[0].trim().slice(0, 64);
+          if (!rateLimit(`login:ip:${ip}`, 30, 15 * 60 * 1000).ok) return null;
+        } catch {
+          /* fall through to credential check */
+        }
         // Brute-force lockout: 5 failures per 15 minutes, per email.
         if (email && authLockedOut(`login:${email}`)) return null;
         const found = DEMO_USERS.find(
@@ -73,7 +85,7 @@ export const authOptions: NextAuthOptions = {
 };
 
 export function isStaff(role?: string): boolean {
-  return ["owner", "admin", "booking_manager", "fleet_manager", "document_reviewer", "support", "analyst"].includes(role ?? "");
+  return STAFF_ROLES.includes(role ?? "");
 }
 
 export function canAdminister(role?: string): boolean {
@@ -91,6 +103,7 @@ export type AdminAction =
   | "maintenance:write"
   | "documents:review"
   | "refunds:write"
+  | "reviews:write"
   | "staff:write";
 
 const POLICY: Record<AdminAction, string[]> = {
@@ -101,6 +114,7 @@ const POLICY: Record<AdminAction, string[]> = {
   "maintenance:write": ["owner", "admin", "fleet_manager"],
   "documents:review": ["owner", "admin", "document_reviewer"],
   "refunds:write": ["owner", "admin"],
+  "reviews:write": ["owner", "admin"],
   "staff:write": ["owner"],
 };
 

@@ -35,11 +35,6 @@ export async function POST(req: Request) {
 
   const pickup = new Date(`${body.pickup}T12:00:00Z`);
   const ret = new Date(`${body.return}T12:00:00Z`);
-  const stayError = validateStay(pickup, ret, { minNights: catalogue.minNights, maxNights: catalogue.maxNights, minNoticeDays: 2 });
-  if (stayError) return NextResponse.json({ error: stayError, available: false }, { status: 422 });
-  if (body.travellers > catalogue.maxTravellers) {
-    return NextResponse.json({ error: `${catalogue.name} accommodates up to ${catalogue.maxTravellers} travellers.` }, { status: 422 });
-  }
 
   try {
     const caravan = await prisma.caravan.findUnique({
@@ -47,12 +42,26 @@ export async function POST(req: Request) {
       include: { bookings: { where: { status: { in: [...BLOCKING_STATUSES] } } }, holds: true, blocks: true, maintenance: { where: { done: false } } },
     });
 
+    // Stay rules + capacity come from the live DB row when seeded (admin
+    // edits apply); the static catalogue is the unseeded fallback.
+    const rules = caravan ?? catalogue;
+    const vanName = caravan?.name ?? catalogue.name;
+    const stayError = validateStay(pickup, ret, { minNights: rules.minNights, maxNights: rules.maxNights, minNoticeDays: 2 });
+    if (stayError) return NextResponse.json({ error: stayError, available: false }, { status: 422 });
+    if (body.travellers > rules.maxTravellers) {
+      return NextResponse.json({ error: `${vanName} accommodates up to ${rules.maxTravellers} travellers.` }, { status: 422 });
+    }
+
     // Resolve extras + coupon BEFORE pricing so every figure derives server-side.
     let extrasResolved: { unitPricePence: number; qty: number; perNight: boolean }[] = [];
     try {
       extrasResolved = await resolveExtras(body.extras, caravan ? { caravanId: caravan.id } : undefined);
     } catch (e) {
       return NextResponse.json({ error: e instanceof Error ? e.message : "Invalid extras." }, { status: 422 });
+    }
+
+    if (caravan && (!caravan.published || caravan.archived)) {
+      return NextResponse.json({ available: false, message: "This caravan is not currently available to book." }, { status: 410 });
     }
 
     const priceWith = async (base: number, weekend: number | null, caravanPct: number, cleaning: number, deposit: number) => {

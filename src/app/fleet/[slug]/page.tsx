@@ -1,17 +1,26 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CARAVANS, EXTRAS } from "@/data/catalogue";
+import { CARAVANS, EXTRAS, type CatalogueCaravan } from "@/data/catalogue";
+import { getLiveCaravans } from "@/features/catalogue/live";
 import { gbp } from "@/lib/format";
 import { CaravanBookingWidget } from "./widget";
 import { Lightbox } from "@/components/fleet/Lightbox";
+
+export const revalidate = 60;
 
 export async function generateStaticParams() {
   return CARAVANS.map((c) => ({ slug: c.slug }));
 }
 
+async function findCaravan(slug: string): Promise<CatalogueCaravan | null> {
+  const live = await getLiveCaravans();
+  // Unpublished vans 404 even though the slug pre-rendered.
+  return live.find((x) => x.slug === slug) ?? null;
+}
+
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
-  const c = CARAVANS.find((x) => x.slug === params.slug);
+  const c = await findCaravan(params.slug);
   if (!c) return { title: "Not found" };
   return {
     title: `${c.name} — ${c.tagline}`,
@@ -20,8 +29,8 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   };
 }
 
-export default function CaravanDetail({ params, searchParams }: { params: { slug: string }; searchParams: Record<string, string | undefined> }) {
-  const c = CARAVANS.find((x) => x.slug === params.slug);
+export default async function CaravanDetail({ params, searchParams }: { params: { slug: string }; searchParams: Record<string, string | undefined> }) {
+  const c = await findCaravan(params.slug);
   if (!c) notFound();
 
   return (
@@ -99,7 +108,12 @@ export default function CaravanDetail({ params, searchParams }: { params: { slug
           </div>
           <aside className="lg:col-span-5">
             <div className="lg:sticky lg:top-24">
-              <CaravanBookingWidget slug={c.slug} initialPickup={searchParams.pickup} initialReturn={searchParams.return} />
+              <CaravanBookingWidget
+                slug={c.slug}
+                initialPickup={searchParams.pickup}
+                initialReturn={searchParams.return}
+                info={{ name: c.name, maxTravellers: c.maxTravellers, minNights: c.minNights, maxNights: c.maxNights, securityDepositPence: c.securityDepositPence }}
+              />
             </div>
           </aside>
         </div>

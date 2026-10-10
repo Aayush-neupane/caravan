@@ -12,7 +12,7 @@ const KICKER = "font-mono text-[0.68rem] font-bold uppercase tracking-[0.22em] t
 // Pinned departure: the familiar headline stays put while the outfit pulls
 // away from the left, uncovering the line it was parked over. The page
 // holds until the reveal completes, then releases.
-export function CinematicHero() {
+export function CinematicHero({ fromPence = 9500 }: { fromPence?: number }) {
   const ref = useRef<HTMLDivElement>(null);
   const reduce = useReducedMotion();
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end end"] });
@@ -76,7 +76,7 @@ export function CinematicHero() {
           <Link href="#permit" onClick={(e) => finishAndGo(e, "#permit")} className="btn-primary !border-white/20">Check availability</Link>
           <Link href="/fleet" onClick={(e) => finishAndGo(e, "/fleet")} className="btn-secondary !bg-transparent !text-paper !border-white/40 hover:!border-white">Meet the fleet</Link>
         </div>
-        <p className="font-display text-xl text-paper">From {gbp(9500)} <span className="font-sans text-sm text-paper/60">/ night · sleeps 2–4</span></p>
+        <p className="font-display text-xl text-paper">From {gbp(fromPence)} <span className="font-sans text-sm text-paper/60">/ night · sleeps 2–4</span></p>
       </div>
     </>
   );

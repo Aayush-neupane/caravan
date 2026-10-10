@@ -8,8 +8,11 @@ import { Framed, SectionMarker, Stamp, TopoLines } from "@/components/editorial/
 import { ScrollRoute } from "@/components/editorial/ScrollRoute";
 import { FleetCard } from "@/components/fleet/FleetCard";
 import { CARAVANS, DESTINATIONS } from "@/data/catalogue";
+import { getLiveCaravans } from "@/features/catalogue/live";
 import { gbp } from "@/lib/format";
 import { priceQuote, seasonalMultiplierFor } from "@/features/pricing/engine";
+
+export const revalidate = 60;
 
 export const metadata: Metadata = {
   title: "Luxury Caravan Hire in Bath",
@@ -24,11 +27,15 @@ const FAQS = [
   { q: "Can I bring a dog?", a: "Yes in Rowan and Solace by arrangement (£35 per rental). Alder remains a no-pets caravan to protect its upholstery." },
 ];
 
-export default function HomePage() {
+export default async function HomePage() {
+  const fleet = await getLiveCaravans();
+  const from = Math.min(...fleet.map((c) => c.baseNightlyPence));
+  const berths = [...new Set(fleet.map((c) => c.berths))].sort((a, b) => a - b);
+  const sleeps = berths.length > 1 ? `${berths[0]}–${berths[berths.length - 1]}` : `${berths[0] ?? 2}`;
   return (
     <>
       {/* 1 — Cinematic hero */}
-      <CinematicHero />
+      <CinematicHero fromPence={from} />
 
       {/* 1b — Expedition permit: booking panel + yard strip */}
       <section id="permit" className="relative border-y border-border bg-sand/50" aria-label="Check availability" style={{ scrollMarginTop: "4rem" }}>
@@ -41,7 +48,7 @@ export default function HomePage() {
             <span>Grid ref ST 726 651 — Lansdown Depot</span>
             <span>51.3811° N, 2.3590° W</span>
             <span className="hidden sm:inline">Season: high summer ×1.2</span>
-            <span className="hidden md:inline">Three vans · sleeps 2–4 · from {gbp(9500)}/nt</span>
+            <span className="hidden md:inline">{fleet.length} vans · sleeps {sleeps} · from {gbp(from)}/nt</span>
           </div>
         </div>
       </section>
@@ -84,7 +91,7 @@ export default function HomePage() {
           </div>
           <p className="mt-3 max-w-2xl text-muted">Genuine inventory with verified weights and nightly rates. Choose dates to see live availability.</p>
           <div className="mt-10 grid gap-6 md:grid-cols-3">
-            {CARAVANS.map((c, i) => (
+            {fleet.map((c, i) => (
               <Reveal key={c.slug} delay={i * 0.06}>
                 <FleetCard caravan={c} />
               </Reveal>

@@ -44,14 +44,9 @@ export async function POST(req: Request) {
 
   const catalogue = CARAVANS.find((c) => c.slug === body.slug);
   if (!catalogue) return NextResponse.json({ error: "Unknown caravan." }, { status: 404 });
-  if (body.travellers > catalogue.maxTravellers) {
-    return NextResponse.json({ error: `${catalogue.name} accommodates up to ${catalogue.maxTravellers} travellers.` }, { status: 422 });
-  }
 
   const pickup = new Date(`${body.pickup}T12:00:00Z`);
   const ret = new Date(`${body.return}T12:00:00Z`);
-  const stayError = validateStay(pickup, ret, { minNights: catalogue.minNights, maxNights: catalogue.maxNights, minNoticeDays: 2 });
-  if (stayError) return NextResponse.json({ error: stayError }, { status: 422 });
 
   // Idempotency: client may send idempotencyKey (or x-idempotency-key header)
   // on retry/back-button/double-tab. A held token hit returns the original
@@ -79,6 +74,15 @@ export async function POST(req: Request) {
       },
     });
     if (!caravan) return NextResponse.json({ error: "Fleet database is not seeded yet. Run `npm run seed`." }, { status: 503 });
+    if (!caravan.published || caravan.archived) {
+      return NextResponse.json({ error: "This caravan is not currently available to book." }, { status: 410 });
+    }
+    // Capacity + stay rules from the live row (admin edits apply).
+    if (body.travellers > caravan.maxTravellers) {
+      return NextResponse.json({ error: `${caravan.name} accommodates up to ${caravan.maxTravellers} travellers.` }, { status: 422 });
+    }
+    const stayError = validateStay(pickup, ret, { minNights: caravan.minNights, maxNights: caravan.maxNights, minNoticeDays: 2 });
+    if (stayError) return NextResponse.json({ error: stayError }, { status: 422 });
 
     // Revalidate availability inside the critical section.
     const existing = [

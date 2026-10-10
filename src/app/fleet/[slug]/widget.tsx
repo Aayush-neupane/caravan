@@ -2,13 +2,20 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { CARAVANS } from "@/data/catalogue";
 import { DateRangeField } from "@/components/forms/DateRangePicker";
 import { Select } from "@/components/forms/Select";
 import { gbp } from "@/lib/format";
 
-export function CaravanBookingWidget({ slug, initialPickup, initialReturn }: { slug: string; initialPickup?: string; initialReturn?: string }) {
-  const c = CARAVANS.find((x) => x.slug === slug)!;
+export type WidgetInfo = {
+  name: string;
+  maxTravellers: number;
+  minNights: number;
+  maxNights: number;
+  securityDepositPence: number;
+};
+
+export function CaravanBookingWidget({ slug, initialPickup, initialReturn, info }: { slug: string; initialPickup?: string; initialReturn?: string; info: WidgetInfo }) {
+  const c = info;
   const router = useRouter();
   const d = (n: number) => { const t = new Date(); t.setDate(t.getDate() + n); return t.toISOString().slice(0, 10); };
   const [pickup, setPickup] = useState(initialPickup || d(14));

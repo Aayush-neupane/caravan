@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { CARAVANS, EXTRAS } from "@/data/catalogue";
+import { CARAVANS, EXTRAS, type CatalogueCaravan } from "@/data/catalogue";
 import { DateRangeField } from "@/components/forms/DateRangePicker";
 import { Select } from "@/components/forms/Select";
 import { MiniOutfit, RouteProgress } from "@/components/editorial/MiniConvoy";
@@ -73,7 +73,7 @@ function Breakdown({ quote }: { quote: Exclude<FlowQuote, null> }) {
   );
 }
 
-export function BookingFlow({ initial }: { initial: Record<string, string | undefined> }) {
+export function BookingFlow({ initial, caravans = CARAVANS }: { initial: Record<string, string | undefined>; caravans?: CatalogueCaravan[] }) {
   const d = (n: number) => { const t = new Date(); t.setDate(t.getDate() + n); return t.toISOString().slice(0, 10); };
   const reduce = useReducedMotion();
   const [step, setStep] = useState(0);
@@ -108,7 +108,7 @@ export function BookingFlow({ initial }: { initial: Record<string, string | unde
       : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   }
 
-  const caravan = useMemo(() => CARAVANS.find((c) => c.slug === slug)!, [slug]);
+  const caravan = useMemo(() => caravans.find((c) => c.slug === slug) ?? caravans[0], [slug, caravans]);
   const extrasList = useMemo(
     () => Object.entries(extras).filter(([, q]) => q > 0).map(([exSlug, qty]) => ({ slug: exSlug, qty })),
     [extras]
@@ -181,7 +181,7 @@ export function BookingFlow({ initial }: { initial: Record<string, string | unde
               <Select
                 id="b-car" label="Caravan"
                 value={slug} onChange={(v) => { setSlug(v); setQuote(null); setAvailable(null); }}
-                options={CARAVANS.map((c) => ({ value: c.slug, label: c.name, hint: `sleeps ${c.berths} · ${gbp(c.baseNightlyPence)}/nt` }))}
+                options={caravans.map((c) => ({ value: c.slug, label: c.name, hint: `sleeps ${c.berths} · ${gbp(c.baseNightlyPence)}/nt` }))}
               />
             </div>
             <div className="lg:col-span-5">

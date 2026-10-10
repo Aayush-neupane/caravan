@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { CARAVANS } from "@/data/catalogue";
+import { CARAVANS, type CatalogueCaravan } from "@/data/catalogue";
 import { priceQuote, type SeasonalRule } from "@/features/pricing/engine";
 import { getPricingRules } from "@/features/pricing/rules";
+import { getLiveCaravans } from "@/features/catalogue/live";
 import { gbp } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Pricing & extras", description: "How caravan hire is priced: nightly rates, seasonal multipliers, weekly discounts, cleaning, deposits, mileage and VAT — with itemised examples from the pricing engine." };
 
-function Example({ slug, pickup, ret, label, seasonal }: { slug: string; pickup: string; ret: string; label: string; seasonal: SeasonalRule[] }) {
-  const c = CARAVANS.find((x) => x.slug === slug)!;
+function Example({ slug, pickup, ret, label, seasonal, caravans }: { slug: string; pickup: string; ret: string; label: string; seasonal: SeasonalRule[]; caravans: CatalogueCaravan[] }) {
+  const c = caravans.find((x) => x.slug === slug) ?? CARAVANS.find((x) => x.slug === slug)!;
   const q = priceQuote({
     baseNightlyPence: c.baseNightlyPence, weekendNightlyPence: c.weekendNightlyPence,
     weeklyDiscountPct: c.weeklyDiscountPct,
@@ -36,6 +37,8 @@ function Example({ slug, pickup, ret, label, seasonal }: { slug: string; pickup:
 
 export default async function PricingPage() {
   const rules = await getPricingRules();
+  const caravans = await getLiveCaravans();
+  const by = (slug: string) => caravans.find((c) => c.slug === slug) ?? CARAVANS.find((c) => c.slug === slug)!;
   return (
     <div className="bg-paper">
       <div className="mx-auto max-w-content px-5 py-12 sm:px-8">
@@ -47,19 +50,19 @@ export default async function PricingPage() {
           deposit split. The refundable security deposit is always shown separately and never counted as revenue.
         </p>
         <div className="mt-8 grid gap-6 md:grid-cols-2">
-          <Example slug="the-rowan" pickup="2026-10-16" ret="2026-10-19" label="Short trip · 3 nights" seasonal={rules.seasonal} />
-          <Example slug="the-alder" pickup="2026-07-10" ret="2026-07-19" label="Summer week · 9 nights" seasonal={rules.seasonal} />
+          <Example slug="the-rowan" pickup="2026-10-16" ret="2026-10-19" label="Short trip · 3 nights" seasonal={rules.seasonal} caravans={caravans} />
+          <Example slug="the-alder" pickup="2026-07-10" ret="2026-07-19" label="Summer week · 9 nights" seasonal={rules.seasonal} caravans={caravans} />
         </div>
         <div className="mt-10 grid gap-8 lg:grid-cols-2">
           <div>
             <h2 className="font-display text-3xl">Rate rules</h2>
             <table className="table-quiet mt-4 bg-white">
               <tbody>
-                <tr><td className="font-semibold">Nightly</td><td>Rowan {gbp(9500)} · Alder {gbp(14500)} · Solace {gbp(16500)}. Fri/Sat nights carry the weekend rate.</td></tr>
-                <tr><td className="font-semibold">Season</td><td>15 Jun–5 Sep ×1.2 · 20 Dec–4 Jan ×1.1 · otherwise ×1.0.</td></tr>
-                <tr><td className="font-semibold">Long stays</td><td>10–15% off nightly subtotal for each full 7-night block (Rowan 10%, Alder 12%, Solace 15%).</td></tr>
-                <tr><td className="font-semibold">Minimums</td><td>Rowan 2 nights · Alder &amp; Solace 3 nights. Max 21–28 nights.</td></tr>
-                <tr><td className="font-semibold">Cleaning</td><td>{gbp(7500)}–{gbp(9500)} mandatory per hire. Leave the van tidy; deep-clean is on us.</td></tr>
+                <tr><td className="font-semibold">Nightly</td><td>{["the-rowan", "the-alder", "the-solace"].map((s) => { const v = by(s); return `${v.name.replace("The ", "")} ${gbp(v.baseNightlyPence)}`; }).join(" · ")}. Fri/Sat nights carry the weekend rate.</td></tr>
+                <tr><td className="font-semibold">Season</td><td>{rules.seasonal.length > 0 ? rules.seasonal.map((r) => `${r.startMonthDay}–${r.endMonthDay} ×${(r.multiplierPct / 100).toFixed(2)}`).join(" · ") : "15 Jun–5 Sep ×1.2 · 20 Dec–4 Jan ×1.1"} · otherwise ×1.0.</td></tr>
+                <tr><td className="font-semibold">Long stays</td><td>Weekly discount off each full 7-night block ({["the-rowan", "the-alder", "the-solace"].map((s) => { const v = by(s); return `${v.name.replace("The ", "")} ${v.weeklyDiscountPct}%`; }).join(" · ")}).</td></tr>
+                <tr><td className="font-semibold">Minimums</td><td>{["the-rowan", "the-alder", "the-solace"].map((s) => { const v = by(s); return `${v.name.replace("The ", "")} ${v.minNights}`; }).join(" · ")} nights min. Max {Math.max(...caravans.map((c) => c.maxNights))} nights.</td></tr>
+                <tr><td className="font-semibold">Cleaning</td><td>{gbp(Math.min(...caravans.map((c) => c.cleaningFeePence)))}–{gbp(Math.max(...caravans.map((c) => c.cleaningFeePence)))} mandatory per hire. Leave the van tidy; deep-clean is on us.</td></tr>
                 <tr><td className="font-semibold">Mileage</td><td>100–120 miles/night included. Excess {gbp(35)}/mile. Extra 250-mile packs {gbp(5500)}.</td></tr>
                 <tr><td className="font-semibold">VAT</td><td>20% on rental + fees + extras after discounts. Shown itemised before payment.</td></tr>
               </tbody>

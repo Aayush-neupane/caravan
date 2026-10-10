@@ -47,15 +47,9 @@ export async function POST(req: Request) {
 
   const catalogue = CARAVANS.find((c) => c.slug === body.slug);
   if (!catalogue) return NextResponse.json({ error: "Unknown caravan." }, { status: 404 });
-  if (body.travellers > catalogue.maxTravellers) {
-    return NextResponse.json({ error: `${catalogue.name} accommodates up to ${catalogue.maxTravellers} travellers.` }, { status: 422 });
-  }
 
   const pickup = new Date(`${body.pickup}T12:00:00Z`);
   const ret = new Date(`${body.return}T12:00:00Z`);
-  // Manual bookings skip the 2-day notice rule (staff can take late walk-ins).
-  const stayError = validateStay(pickup, ret, { minNights: catalogue.minNights, maxNights: catalogue.maxNights });
-  if (stayError) return NextResponse.json({ error: stayError }, { status: 422 });
 
   try {
     const caravan = await prisma.caravan.findUnique({
@@ -66,6 +60,12 @@ export async function POST(req: Request) {
       },
     });
     if (!caravan) return NextResponse.json({ error: "Fleet not seeded." }, { status: 503 });
+    if (body.travellers > caravan.maxTravellers) {
+      return NextResponse.json({ error: `${caravan.name} accommodates up to ${caravan.maxTravellers} travellers.` }, { status: 422 });
+    }
+    // Manual bookings skip the 2-day notice rule (staff can take late walk-ins).
+    const stayError = validateStay(pickup, ret, { minNights: caravan.minNights, maxNights: caravan.maxNights });
+    if (stayError) return NextResponse.json({ error: stayError }, { status: 422 });
 
     const existing = [
       ...caravan.bookings.map((b) => ({ start: new Date(b.pickupDate), end: new Date(b.returnDate) })),

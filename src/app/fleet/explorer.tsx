@@ -2,13 +2,13 @@
 
 import { useMemo, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { CARAVANS } from "@/data/catalogue";
+import { CARAVANS, type CatalogueCaravan } from "@/data/catalogue";
 import { FleetCard } from "@/components/fleet/FleetCard";
 import { DateRangeField } from "@/components/forms/DateRangePicker";
 import { Select } from "@/components/forms/Select";
 import { gbp } from "@/lib/format";
 
-export function FleetExplorer({ initial }: { initial: Record<string, string | undefined> }) {
+export function FleetExplorer({ initial, caravans = CARAVANS }: { initial: Record<string, string | undefined>; caravans?: CatalogueCaravan[] }) {
   const search = useSearchParams();
   const router = useRouter();
   const pickup = search.get("pickup") ?? initial.pickup ?? "";
@@ -20,7 +20,7 @@ export function FleetExplorer({ initial }: { initial: Record<string, string | un
   const [sort, setSort] = useState("relevance");
 
   const filtered = useMemo(() => {
-    let list = [...CARAVANS];
+    let list = [...caravans];
     if (category !== "any") list = list.filter((c) => c.category === category);
     if (berths !== "any") list = list.filter((c) => String(c.berths) === berths);
     list = list.filter((c) => c.baseNightlyPence / 100 <= Number(maxPrice));
@@ -29,7 +29,7 @@ export function FleetExplorer({ initial }: { initial: Record<string, string | un
     if (sort === "price-desc") list.sort((a, b) => b.baseNightlyPence - a.baseNightlyPence);
     if (sort === "berths") list.sort((a, b) => b.berths - a.berths);
     return list;
-  }, [berths, category, maxPrice, showerOnly, sort]);
+  }, [berths, category, maxPrice, showerOnly, sort, caravans]);
 
   const activeCount = [berths !== "any", category !== "any", showerOnly, maxPrice !== "200"].filter(Boolean).length;
 
@@ -112,7 +112,7 @@ export function FleetExplorer({ initial }: { initial: Record<string, string | un
       </aside>
       <div className="lg:col-span-9">
         <p className="text-[0.9rem] text-muted" role="status">
-          {filtered.length} of {CARAVANS.length} caravans
+          {filtered.length} of {caravans.length} caravans
           {pickup && ret ? ` · ${pickup} → ${ret}` : " · choose dates to check availability"}
           {Number.isFinite(travellers) && travellers > 0 ? ` · ${travellers} travellers` : ""}
         </p>
